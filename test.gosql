@@ -1,0 +1,18 @@
+@postgresql
+
+User {
+    id int @unique @default(autoincrement) @index
+    email string(500) @unique @index
+    name string?
+    password string @default("testdd")
+}
+
+
+Post {
+    id int @unique @default(autoincrement) @index
+    createdAt dateTime @default(now)
+    updatedAt dateTime @default(now)
+    user User @index
+}
+
+ 
