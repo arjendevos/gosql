@@ -1,18 +1,40 @@
 @postgresql
 
-User {
-    id int @unique @default(autoincrement) @index
-    email string(500) @unique @index
-    name string?
-    password string @default("testdd")
-}
 
-
-Post {
+Proxy {
     id int @unique @default(autoincrement) @index
+    host string(255) @unique
+    scheme varchar(5) @default("http")
+    port int @default(8080)
+    username string(255) @unique @default("PRIVATEVPN_USERNAME")
+    password string(255) @unique @default("PRIVATEVPN_PASSWORD")
+    isCustomProvider bool @default(false)
     createdAt dateTime @default(now)
     updatedAt dateTime @default(now)
-    user User @index
 }
 
+Credential {
+    id int @unique @default(autoincrement) @index
+    csfrToken string(255)
+    userAgent string(255)
+    appId string(255) 
+    Cookie text
+    createdAt dateTime @default(now)
+    updatedAt dateTime @default(now)
+}
+
+InstagramAccount {
+    id int @unique @default(autoincrement) @index
+    instagram_id string(255) @unique @index
+    username string(255) @unique @index
+    password string(255)
+    country string(255)
+    active bool @default(false)
+    totalActionsDone int @default(0)
+    needs_to_be_checked bool @default(false)
+    proxy Proxy @index
+    credential Credential @index
+    createdAt dateTime @default(now)
+    updatedAt dateTime @default(now)
+}
  

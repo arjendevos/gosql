@@ -1,6 +1,7 @@
 package functions
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"strings"
@@ -34,7 +35,7 @@ func ConvertPostgreSQL(fileName string, models []*Model) {
 				if constraintType == "ID" {
 					constraint = fmt.Sprintf("CONSTRAINT %v_pk PRIMARY KEY (%v)", tableName, c.Name)
 				}
-				if constraintType == "UNQIQUE" {
+				if constraintType == "UNIQUE" {
 					constraint = fmt.Sprintf("CONSTRAINT %v_ak_%v UNIQUE (%v) NOT DEFERRABLE INITIALLY IMMEDIATE", tableName, ak, c.Name)
 					ak++
 				}
@@ -42,8 +43,26 @@ func ConvertPostgreSQL(fileName string, models []*Model) {
 			})
 
 			if isRelation {
+				// Check if exists in models
+				var exists bool
+				var relationType string
+				for _, m := range models {
+					if strings.EqualFold(m.Name, t) {
+						exists = true
+						for _, co := range m.Columns {
+							if strings.EqualFold(co.Name, "id") {
+								relationType, _ = convertType(tableName, co, func(constraintType string) {})
+							}
+						}
+					}
+				}
+
+				if !exists || relationType == "" {
+					panic("Relation " + t + " does not exist")
+				}
+
 				columnName := c.Name + "_id"
-				line = fmt.Sprintf("\t\t%v INT", columnName)
+				line = fmt.Sprintf("\t\t%v %v", camelToSnake(columnName), relationType)
 
 				if c.Type.IsNullable {
 					line += " NULL"
@@ -51,17 +70,18 @@ func ConvertPostgreSQL(fileName string, models []*Model) {
 					line += " NOT NULL"
 				}
 
-				constraints = append(constraints, fmt.Sprintf("CONSTRAINT %v_%v_fk_%v FOREIGN KEY (%v) REFERENCES %v (id) NOT DEFERRABLE INITIALLY IMMEDIATE", tableName, columnName, fk, c.Name, t))
+				constraints = append(constraints, fmt.Sprintf("CONSTRAINT %v_%v_fk_%v FOREIGN KEY (%v) REFERENCES %v (id) NOT DEFERRABLE INITIALLY IMMEDIATE", tableName, columnName, fk, columnName, t))
 				fk++
 
 				for _, a := range c.Attributes {
 					if a.Name == "index" {
 						indexes = append(indexes, fmt.Sprintf("CREATE INDEX %v_idx_%v ON %v (%v)", tableName, idx, tableName, columnName))
+						idx++
 					}
 				}
 
 			} else {
-				line = fmt.Sprintf("\t\t%v %v", c.Name, t)
+				line = fmt.Sprintf("\t\t%v %v", camelToSnake(c.Name), t)
 				if c.Type.IsNullable {
 					line += " NULL"
 				} else {
@@ -83,6 +103,7 @@ func ConvertPostgreSQL(fileName string, models []*Model) {
 
 					if a.Name == "index" {
 						indexes = append(indexes, fmt.Sprintf("CREATE INDEX %v_idx_%v ON %v (%v)", tableName, idx, tableName, c.Name))
+						idx++
 					}
 				}
 			}
@@ -119,7 +140,7 @@ func convertType(tableName string, c *Column, cb func(constraint string)) (typeN
 		}
 
 		if a.Name == "unique" {
-			cb("UNQIQUE")
+			cb("UNIQUE")
 		}
 	}
 
@@ -138,7 +159,26 @@ func convertType(tableName string, c *Column, cb func(constraint string)) (typeN
 		return "BOOLEAN", false
 	case "dateTime":
 		return "TIMESTAMP", false
+	case "uuid":
+		return "UUID", false
+	case "uint":
+		return "UINT", false
 	default:
 		return "UNKNOWN", false
 	}
+}
+
+func camelToSnake(input string) string {
+	var output bytes.Buffer
+	for i, r := range input {
+		if unicode.IsUpper(r) {
+			if i > 0 {
+				output.WriteRune('_')
+			}
+			output.WriteRune(unicode.ToLower(r))
+		} else {
+			output.WriteRune(r)
+		}
+	}
+	return output.String()
 }

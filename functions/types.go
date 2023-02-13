@@ -2,10 +2,11 @@ package functions
 
 const (
 	// body = `(?m)^\s{4}.*$`
-	atSignRegexp             = `@([a-zA-Z]+)`
-	modelRegexp              = `(?:^|\n)\s*([A-Z][a-z]*)\s*{((?:.|\n)*?)}`
-	modelSplitRegexp         = `^\s*([A-Z][a-z]*)\s*{((?:.|\n)*?)}`
-	attributeWithValueRegexp = `^@([a-zA-Z]+)\(([^)]+)\)`
+	atSignRegexp              = `@([a-zA-Z]+)`
+	modelRegexp               = `(?:^|\n)\s*([A-Z][a-zA-Z]*)\s*{((?:.|\n)*?)}`
+	modelSplitRegexp          = `^\s*([A-Z][a-zA-Z]*)\s*{((?:.|\n)*?)}`
+	attributeWithValueRegexp  = `^@([a-zA-Z]+)\(([^)]+)\)`
+	attributeWithValueRegexp2 = `^@([a-zA-Z]+)\(([\s\S]+)\)`
 )
 
 type Model struct {

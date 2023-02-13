@@ -1,6 +1,7 @@
 package functions
 
 import (
+	"fmt"
 	"os"
 	"regexp"
 	"strconv"
@@ -37,8 +38,14 @@ func ParseGoSQLFile(fileName string) (string, []*Model) {
 		re := regexp.MustCompile(modelSplitRegexp)
 		match := re.FindStringSubmatch(m)
 
-		name := match[1]
+		if len(match) <= 1 {
+			panic("Invalid model definition")
+		}
+
+		name := camelToSnake(match[1])
 		body := strings.TrimSpace(match[2])
+
+		fmt.Println(name)
 
 		var columns []*Column
 
@@ -55,12 +62,14 @@ func ParseGoSQLFile(fileName string) (string, []*Model) {
 			extraAttributesArray := splittedLine[2:]
 			for _, extraAttribute := range extraAttributesArray {
 				if !strings.Contains(extraAttribute, "@") {
+					fmt.Println(extraAttribute)
 					panic("Invalid attribute definition")
 				}
 
 				if strings.Contains(extraAttribute, "(") && strings.Contains(extraAttribute, ")") {
-					re := regexp.MustCompile(attributeWithValueRegexp)
+					re := regexp.MustCompile(attributeWithValueRegexp2)
 					match := re.FindStringSubmatch(extraAttribute)
+
 					name := match[1]
 					value := match[2]
 					attributes = append(attributes, &Attribute{
@@ -115,6 +124,21 @@ func ParseGoSQLFile(fileName string) (string, []*Model) {
 		})
 
 	}
+
+	// for _, m := range models {
+	// 	fmt.Println(m.Name)
+	// 	for _, c := range m.Columns {
+	// 		fmt.Println(c.Name)
+	// 		fmt.Println("  ", c.Type.Name)
+	// 		fmt.Println("  ", c.Type.IsNullable)
+	// 		fmt.Println("  ", c.Type.HasDifferentCharLength)
+	// 		fmt.Println("  ", c.Type.CharLength)
+
+	// 		for _, a := range c.Attributes {
+	// 			fmt.Println("    ", a.Name, a.Value, a.HasValue)
+	// 		}
+	// 	}
+	// }
 
 	return sqlType, models
 
