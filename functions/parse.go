@@ -20,7 +20,12 @@ func ParseGoSQLFile(fileName string) (string, []*Model) {
 	}
 	defer file.Close()
 
-	dat := make([]byte, 1024)
+	size, err := file.Stat()
+	if err != nil {
+		panic(err)
+	}
+
+	dat := make([]byte, size.Size())
 	_, err = file.Read(dat)
 	if err != nil {
 		panic(err)
@@ -44,8 +49,6 @@ func ParseGoSQLFile(fileName string) (string, []*Model) {
 
 		name := camelToSnake(match[1])
 		body := strings.TrimSpace(match[2])
-
-		fmt.Println(name)
 
 		var columns []*Column
 
@@ -74,7 +77,7 @@ func ParseGoSQLFile(fileName string) (string, []*Model) {
 					value := match[2]
 					attributes = append(attributes, &Attribute{
 						Name:     name,
-						Value:    value,
+						Value:    strings.ReplaceAll(value, `"`, "'"),
 						HasValue: true,
 					})
 

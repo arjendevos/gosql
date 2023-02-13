@@ -1,13 +1,12 @@
 @postgresql
 
-
 Proxy {
     id int @unique @default(autoincrement) @index
     host string(255) @unique
-    scheme varchar(5) @default("http")
+    scheme string(5) @default("http")
     port int @default(8080)
-    username string(255) @unique @default("PRIVATEVPN_USERNAME")
-    password string(255) @unique @default("PRIVATEVPN_PASSWORD")
+    username string(255) @unique @default('PRIVATEVPN_USERNAME')
+    password string(255) @unique @default('PRIVATEVPN_PASSWORD')
     isCustomProvider bool @default(false)
     createdAt dateTime @default(now)
     updatedAt dateTime @default(now)
