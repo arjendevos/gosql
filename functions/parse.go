@@ -1,11 +1,12 @@
 package functions
 
 import (
-	"fmt"
+	"bytes"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
+	"unicode"
 )
 
 func ParseGoSQLFile(fileName string) (string, []*Model) {
@@ -65,7 +66,6 @@ func ParseGoSQLFile(fileName string) (string, []*Model) {
 			extraAttributesArray := splittedLine[2:]
 			for _, extraAttribute := range extraAttributesArray {
 				if !strings.Contains(extraAttribute, "@") {
-					fmt.Println(extraAttribute)
 					panic("Invalid attribute definition")
 				}
 
@@ -115,15 +115,17 @@ func ParseGoSQLFile(fileName string) (string, []*Model) {
 			}
 
 			columns = append(columns, &Column{
-				Name:       splittedLine[0],
+				SnakeName:  camelToSnake(splittedLine[0]),
+				CamelName:  snakeToCamel(splittedLine[0]),
 				Type:       t,
 				Attributes: attributes,
 			})
 		}
 
 		models = append(models, &Model{
-			Name:    name,
-			Columns: columns,
+			SnakeName: name,
+			CamelName: snakeToCamel(name),
+			Columns:   columns,
 		})
 
 	}
@@ -145,4 +147,26 @@ func ParseGoSQLFile(fileName string) (string, []*Model) {
 
 	return sqlType, models
 
+}
+
+func snakeToCamel(s string) string {
+	s = strings.ReplaceAll(s, "_", " ")
+	s = strings.Title(s)
+	s = strings.ReplaceAll(s, " ", "")
+	return s
+}
+
+func camelToSnake(input string) string {
+	var output bytes.Buffer
+	for i, r := range input {
+		if unicode.IsUpper(r) {
+			if i > 0 {
+				output.WriteRune('_')
+			}
+			output.WriteRune(unicode.ToLower(r))
+		} else {
+			output.WriteRune(r)
+		}
+	}
+	return output.String()
 }

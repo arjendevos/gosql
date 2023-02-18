@@ -1,0 +1,15 @@
+output = "models/dm"
+pkgname = "dm"
+wipe     = true
+no-tests = true
+add-enum-types = true
+
+[psql]
+dbname = "instagram"
+host   = "localhost"
+port   = 5432
+user   = "arjen"
+pass   = "root"
+sslmode = "disable"
+# schema = "myschema"
+# blacklist = ["migrations", "other"]

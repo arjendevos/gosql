@@ -1,19 +1,21 @@
 package functions
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"strings"
 	"unicode"
 )
 
-func ConvertPostgreSQL(fileName string, models []*Model) {
+func ConvertToSql(fileName, t string, models []*Model) error {
+	if t != "postgresql" {
+		return fmt.Errorf("sql type %s not supported", t)
+	}
 	fileName = strings.TrimSuffix(fileName, ".gosql")
 
 	file, err := os.Create(fileName + ".sql")
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer file.Close()
 
@@ -25,7 +27,7 @@ func ConvertPostgreSQL(fileName string, models []*Model) {
 		var fk = 1
 		var idx = 1
 
-		tableName := strings.ToLower(m.Name)
+		tableName := strings.ToLower(m.SnakeName)
 		file.WriteString("CREATE TABLE " + tableName + " (\n")
 		for _, c := range m.Columns {
 			var line string
@@ -33,36 +35,40 @@ func ConvertPostgreSQL(fileName string, models []*Model) {
 			t, isRelation := convertType(tableName, c, func(constraintType string) {
 				var constraint string
 				if constraintType == "ID" {
-					constraint = fmt.Sprintf("CONSTRAINT %v_pk PRIMARY KEY (%v)", tableName, c.Name)
+					constraint = fmt.Sprintf("CONSTRAINT %v_pk PRIMARY KEY (%v)", tableName, c.SnakeName)
 				}
 				if constraintType == "UNIQUE" {
-					constraint = fmt.Sprintf("CONSTRAINT %v_ak_%v UNIQUE (%v) NOT DEFERRABLE INITIALLY IMMEDIATE", tableName, ak, c.Name)
+					constraint = fmt.Sprintf("CONSTRAINT %v_ak_%v UNIQUE (%v) NOT DEFERRABLE INITIALLY IMMEDIATE", tableName, ak, c.SnakeName)
 					ak++
 				}
 				constraints = append(constraints, constraint)
 			})
 
 			if isRelation {
+
 				// Check if exists in models
 				var exists bool
 				var relationType string
 				for _, m := range models {
-					if strings.EqualFold(m.Name, t) {
+					if strings.EqualFold(m.SnakeName, t) {
 						exists = true
 						for _, co := range m.Columns {
-							if strings.EqualFold(co.Name, "id") {
+							if strings.EqualFold(co.SnakeName, "id") {
 								relationType, _ = convertType(tableName, co, func(constraintType string) {})
+								if relationType == "SERIAL" {
+									relationType = "INTEGER"
+								}
 							}
 						}
 					}
 				}
 
 				if !exists || relationType == "" {
-					panic("Relation " + t + " does not exist")
+					return fmt.Errorf("Relation " + t + " does not exist")
 				}
 
-				columnName := c.Name + "_id"
-				line = fmt.Sprintf("\t\t%v %v", camelToSnake(columnName), relationType)
+				snakeColumnName := c.SnakeName + "_id"
+				line = fmt.Sprintf("\t\t%v %v", snakeColumnName, relationType)
 
 				if c.Type.IsNullable {
 					line += " NULL"
@@ -70,18 +76,18 @@ func ConvertPostgreSQL(fileName string, models []*Model) {
 					line += " NOT NULL"
 				}
 
-				constraints = append(constraints, fmt.Sprintf("CONSTRAINT %v_%v_fk_%v FOREIGN KEY (%v) REFERENCES %v (id) NOT DEFERRABLE INITIALLY IMMEDIATE", tableName, columnName, fk, columnName, t))
+				constraints = append(constraints, fmt.Sprintf("CONSTRAINT %v_%v_fk_%v FOREIGN KEY (%v) REFERENCES %v (id) NOT DEFERRABLE INITIALLY IMMEDIATE", tableName, snakeColumnName, fk, snakeColumnName, t))
 				fk++
 
 				for _, a := range c.Attributes {
 					if a.Name == "index" {
-						indexes = append(indexes, fmt.Sprintf("CREATE INDEX %v_idx_%v ON %v (%v)", tableName, idx, tableName, columnName))
+						indexes = append(indexes, fmt.Sprintf("CREATE INDEX %v_idx_%v ON %v (%v)", tableName, idx, tableName, snakeColumnName))
 						idx++
 					}
 				}
 
 			} else {
-				line = fmt.Sprintf("\t\t%v %v", camelToSnake(c.Name), t)
+				line = fmt.Sprintf("\t\t%v %v", c.SnakeName, t)
 				if c.Type.IsNullable {
 					line += " NULL"
 				} else {
@@ -102,7 +108,7 @@ func ConvertPostgreSQL(fileName string, models []*Model) {
 					}
 
 					if a.Name == "index" {
-						indexes = append(indexes, fmt.Sprintf("CREATE INDEX %v_idx_%v ON %v (%v)", tableName, idx, tableName, c.Name))
+						indexes = append(indexes, fmt.Sprintf("CREATE INDEX %v_idx_%v ON %v (%v)", tableName, idx, tableName, c.SnakeName))
 						idx++
 					}
 				}
@@ -130,6 +136,8 @@ func ConvertPostgreSQL(fileName string, models []*Model) {
 		file.WriteString("\n")
 	}
 
+	return nil
+
 }
 
 func convertType(tableName string, c *Column, cb func(constraint string)) (typeName string, isRelation bool) {
@@ -144,8 +152,8 @@ func convertType(tableName string, c *Column, cb func(constraint string)) (typeN
 		}
 	}
 
-	if unicode.IsUpper(rune(c.Type.Name[0])) {
-		return strings.ToLower(c.Type.Name), true
+	if isRel(c.Type.Name) {
+		return strings.ToLower(camelToSnake(c.Type.Name)), true
 	}
 
 	switch c.Type.Name {
@@ -168,17 +176,6 @@ func convertType(tableName string, c *Column, cb func(constraint string)) (typeN
 	}
 }
 
-func camelToSnake(input string) string {
-	var output bytes.Buffer
-	for i, r := range input {
-		if unicode.IsUpper(r) {
-			if i > 0 {
-				output.WriteRune('_')
-			}
-			output.WriteRune(unicode.ToLower(r))
-		} else {
-			output.WriteRune(r)
-		}
-	}
-	return output.String()
+func isRel(s string) bool {
+	return unicode.IsUpper(rune(s[0]))
 }

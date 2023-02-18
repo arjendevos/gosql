@@ -10,9 +10,20 @@ func main() {
 	files, _ := filepath.Glob("*.gosql")
 
 	for _, file := range files {
-		sqlType, models := functions.ParseGoSQLFile(file)
-		if sqlType == "postgresql" {
-			functions.ConvertPostgreSQL(file, models)
+		_, models := functions.ParseGoSQLFile(file)
+		// err := functions.ConvertToSql(file, sqlType, models)
+		// if err != nil {
+		// 	panic(err)
+		// }
+
+		err := functions.ConvertToApiModels(models)
+		if err != nil {
+			panic(err)
+		}
+
+		err = functions.ConvertToApiControllers(models)
+		if err != nil {
+			panic(err)
 		}
 	}
 

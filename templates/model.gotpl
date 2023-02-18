@@ -1,0 +1,34 @@
+package {{ .PackageName }}
+
+import (
+{{ range $v := .Imports }}
+    "{{ . }}"
+{{- end }}
+)
+
+type {{ .CamelName }} struct {
+    *dm.{{ .CamelName }}
+
+{{ range $relation := .Relations }}
+    {{ .Name }} {{ .Type }} {{ .Tag }}
+{{- end }}
+}
+
+type {{ .CamelName }}Slice []*{{ .CamelName }}
+
+func SqlBoiler{{ pluralize .CamelName }}ToApi{{ pluralize .CamelName }}(a dm.{{ .CamelName }}Slice) {{ .CamelName }}Slice {
+    var s {{ .CamelName }}Slice
+    for _, d := range a {
+        s = append(s, SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}(d))
+    }
+    return s
+}
+
+func SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}(a *dm.{{ .CamelName }}) *{{ .CamelName }} {
+    return &{{ .CamelName }}{
+        {{ .CamelName }}: a,
+    {{ range $relation := .Relations }}
+        {{ .Name }}: a.R.{{ .Name }},
+    {{- end }}
+    }
+}

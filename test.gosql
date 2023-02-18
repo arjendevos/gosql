@@ -1,13 +1,24 @@
 @postgresql
 
+Account {
+    id int @unique @default(autoincrement) @index
+    name string(255)
+    profilePictureUrl text
+    email string(255) @unique @index
+    password string(255)
+    createdAt dateTime @default(now)
+    updatedAt dateTime @default(now)
+}
+
 Proxy {
     id int @unique @default(autoincrement) @index
     host string(255) @unique
     scheme string(5) @default("http")
     port int @default(8080)
-    username string(255) @unique @default('PRIVATEVPN_USERNAME')
-    password string(255) @unique @default('PRIVATEVPN_PASSWORD')
+    username string(255) @default('PRIVATEVPN_USERNAME')
+    password string(255) @default('PRIVATEVPN_PASSWORD')
     isCustomProvider bool @default(false)
+    account Account @index
     createdAt dateTime @default(now)
     updatedAt dateTime @default(now)
 }
@@ -18,22 +29,72 @@ Credential {
     userAgent string(255)
     appId string(255) 
     Cookie text
+    instagram_id string(255) @unique @index
+    createdAt dateTime @default(now)
+    updatedAt dateTime @default(now)
+}
+
+Job {
+    id int @unique @default(autoincrement) @index
+    type string(255) @index
     createdAt dateTime @default(now)
     updatedAt dateTime @default(now)
 }
 
 InstagramAccount {
     id int @unique @default(autoincrement) @index
-    instagram_id string(255) @unique @index
-    username string(255) @unique @index
+    username string(255)
     password string(255)
     country string(255)
     active bool @default(false)
     totalActionsDone int @default(0)
-    needs_to_be_checked bool @default(false)
-    proxy Proxy @index
-    credential Credential @index
+    needsToBeChecked bool @default(false)
+    loginFailed bool @default(false)
+    isSetup bool @default(false)
+    setupTargetAccountUsername string(255)
+    proxy Proxy? @index
+    credential Credential? @index
+    account Account? @index
+    job Job? @index
     createdAt dateTime @default(now)
     updatedAt dateTime @default(now)
 }
  
+ScrapedInstagramAccount {
+    id int @unique @default(autoincrement) @index
+    instagramId string(255)
+    username string(255)
+    fullName string(255)
+    biography text
+    facebookId string(255)
+    isVerified bool
+    isPrivate bool
+    profilePictureUrl text
+    externalUrl text
+    businessCategoryName string(255)
+    categoryName string(255)
+    isBusinessAccount bool
+    isProfessionalAccount bool
+    followedByCount int
+    followCount int
+    mediaCount int
+    highlightCount int
+    hasReels bool
+    extractedEmail string(255)
+    hasManagement bool
+    account Account @index
+    createdAt dateTime @default(now)
+    updatedAt dateTime @default(now)
+}
+
+ScrapedInstagramAccountChained {
+    id int @unique @default(autoincrement) @index
+    instagramId string(255)
+    username string(255) 
+    fullName string(255)
+    profilePictureUrl text
+    scrapedInstagramAccount ScrapedInstagramAccount @index
+    account Account @index
+    createdAt dateTime @default(now)
+    updatedAt dateTime @default(now)
+}
