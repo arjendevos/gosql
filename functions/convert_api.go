@@ -9,6 +9,9 @@ import (
 	"go/token"
 	"io/ioutil"
 	"os"
+	"path"
+	"path/filepath"
+	"runtime"
 	"text/template"
 	"unicode"
 )
@@ -32,7 +35,8 @@ func (c *GoSQLConfig) ConvertApiModels(models []*Model) error {
 	moduleName := modFile.Module.Mod.Path
 
 	pkgName := config.PkgName
-	outputDir := c.ModelOutputDir + "/am"
+	dir, _ := os.Getwd()
+	outputDir := dir + "/" + c.ModelOutputDir + "/am"
 
 	if err := os.RemoveAll(outputDir); err != nil {
 		return err
@@ -92,7 +96,7 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 	imports = addImport(imports, moduleName+"/"+config.Output)
 	imports = addImport(imports, moduleName+"/"+c.ModelOutputDir+"/am")
 
-	if err := populateTemplate("templates/helpers.gotpl", outputDir+"/generated_helpers.go", TemplateData{PackageName: "controllers"}); err != nil {
+	if err := populateTemplate("./templates/helpers.gotpl", outputDir+"/generated_helpers.go", TemplateData{PackageName: "controllers"}); err != nil {
 		return err
 	}
 	if err := populateTemplate("templates/queries.gotpl", outputDir+"/generated_queries.go", GeneralTemplateData{PackageName: "controllers", Controllers: models}); err != nil {
@@ -105,6 +109,10 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 		return err
 	}
 	if err := populateTemplate("templates/selects.gotpl", outputDir+"/generated_selects.go", GeneralTemplateData{PackageName: "controllers", Controllers: models}); err != nil {
+		return err
+	}
+
+	if err := populateTemplate("templates/routes.gotpl", outputDir+"/generated_routes.go", GeneralTemplateData{PackageName: "controllers", Controllers: models}); err != nil {
 		return err
 	}
 
@@ -171,7 +179,12 @@ func fieldTypeToString(prefix string, fieldType ast.Expr) (string, error) {
 }
 
 func populateTemplate(file, output string, data interface{}) error {
-	content, err := ioutil.ReadFile(file)
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		panic("Could not get package directory path")
+	}
+	packageDir := path.Join(filepath.Dir(filename), "..")
+	content, err := ioutil.ReadFile(packageDir + "/" + file)
 	if err != nil {
 		return err
 	}

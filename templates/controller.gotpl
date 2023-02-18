@@ -2,9 +2,7 @@
 package {{ .PackageName}}
 
 import (
-	"context"
-	"http"
-	"database/sql"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 

@@ -1,6 +1,10 @@
 package gosql
 
-import "github.com/arjendevos/gosql/functions"
+import (
+	"os"
+
+	"github.com/arjendevos/gosql/functions"
+)
 
 type GoSQLConfig struct {
 	SchemeDir           string
@@ -10,10 +14,12 @@ type GoSQLConfig struct {
 }
 
 func Convert(c *GoSQLConfig) {
+	dir, _ := os.Getwd()
+
 	functions.Convert(&functions.GoSQLConfig{
-		SchemeDir:           c.SchemeDir,
-		MigrationDir:        c.MigrationDir,
+		SchemeDir:           dir + "/" + c.SchemeDir,
+		MigrationDir:        dir + "/" + c.MigrationDir,
 		ModelOutputDir:      c.ModelOutputDir,
-		ControllerOutputDir: c.ControllerOutputDir,
+		ControllerOutputDir: dir + "/" + c.ControllerOutputDir,
 	})
 }

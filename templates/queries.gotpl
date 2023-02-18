@@ -43,7 +43,7 @@ import (
 			return nil, err
 		}
 
-		r, err := parse{{ .CamelName }}Relations(filter)
+		r, err := parse{{ .CamelName }}Relations(relations)
 		if err != nil {
 			return nil, err
 		}

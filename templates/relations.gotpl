@@ -4,7 +4,6 @@ package {{ .PackageName }}
 import (
 	"encoding/json"
 
-	"github.com/gin-gonic/gin"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
 
