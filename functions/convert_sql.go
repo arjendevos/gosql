@@ -7,13 +7,13 @@ import (
 	"unicode"
 )
 
-func ConvertToSql(fileName, t string, models []*Model) error {
+func (c *GoSQLConfig) ConvertToSql(fileName, t string, models []*Model) error {
 	if t != "postgresql" {
 		return fmt.Errorf("sql type %s not supported", t)
 	}
 	fileName = strings.TrimSuffix(fileName, ".gosql")
 
-	file, err := os.Create(fileName + ".sql")
+	file, err := os.Create(c.SchemeDir + fileName + ".sql")
 	if err != nil {
 		return err
 	}

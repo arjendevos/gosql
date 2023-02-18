@@ -19,7 +19,7 @@ type StructWithRelations struct {
 	Relations  []string
 }
 
-func ConvertToApiModels(models []*Model) error {
+func (c *GoSQLConfig) ConvertApiModels(models []*Model) error {
 	config, err := parseSqlBoilerConfig()
 	if err != nil {
 		return err
@@ -69,31 +69,7 @@ func ConvertToApiModels(models []*Model) error {
 
 }
 
-func populateTemplate(file, output string, data interface{}) error {
-	content, err := ioutil.ReadFile(file)
-	if err != nil {
-		return err
-	}
-
-	template, err := parseTemplate(&TemplateConfig{Template: string(content), Data: data})
-	if err != nil {
-		return err
-	}
-
-	hF, err := os.Create(output)
-	if err != nil {
-		return err
-	}
-	defer hF.Close()
-	_, err = hF.WriteString(template)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func ConvertToApiControllers(models []*Model) error {
+func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 	outputDir := "api/controllers"
 	if err := os.RemoveAll(outputDir); err != nil {
 		return err
@@ -196,6 +172,30 @@ func fieldTypeToString(prefix string, fieldType ast.Expr) (string, error) {
 	default:
 		return "", fmt.Errorf("unsupported field type: %T", fieldType)
 	}
+}
+
+func populateTemplate(file, output string, data interface{}) error {
+	content, err := ioutil.ReadFile(file)
+	if err != nil {
+		return err
+	}
+
+	template, err := parseTemplate(&TemplateConfig{Template: string(content), Data: data})
+	if err != nil {
+		return err
+	}
+
+	hF, err := os.Create(output)
+	if err != nil {
+		return err
+	}
+	defer hF.Close()
+	_, err = hF.WriteString(template)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type TemplateConfig struct {
