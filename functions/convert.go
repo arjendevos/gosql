@@ -22,7 +22,8 @@ func Convert(c *GoSQLConfig) {
 
 	files, err := filepath.Glob(c.SchemeDir + "**.gosql")
 	if err != nil {
-		panic(err)
+		fmt.Println("ERR!", err)
+		os.Exit(1)
 	}
 
 	for _, filePath := range files {
@@ -43,7 +44,8 @@ func Convert(c *GoSQLConfig) {
 
 		err = c.ConvertApiControllers(models)
 		if err != nil {
-			panic(err)
+			fmt.Println("ERR!", err)
+			os.Exit(1)
 		}
 	}
 }

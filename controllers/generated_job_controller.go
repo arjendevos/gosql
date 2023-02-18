@@ -8,8 +8,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/arjendevos/gosql/models/am"
 	"github.com/arjendevos/gosql/models/dm"
-	"github.com/arjendevos/gosqlmodels/am"
 )
 
 type JobController struct {

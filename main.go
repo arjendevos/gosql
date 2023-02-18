@@ -1,15 +1,21 @@
-package main
+package gosql
 
 import (
 	"github.com/arjendevos/gosql/functions"
 )
 
-func main() {
-	functions.Convert(&functions.GoSQLConfig{
-		SchemeDir:           "test",
-		MigrationDir:        "database/migrations",
-		ModelOutputDir:      "models",
-		ControllerOutputDir: "controllers",
-	})
+type GoSQLConfig struct {
+	SchemeDir           string
+	MigrationDir        string
+	ModelOutputDir      string
+	ControllerOutputDir string
+}
 
+func Convert(c *GoSQLConfig) {
+	functions.Convert(&functions.GoSQLConfig{
+		SchemeDir:           c.SchemeDir,
+		MigrationDir:        c.MigrationDir,
+		ModelOutputDir:      c.ModelOutputDir,
+		ControllerOutputDir: c.ControllerOutputDir,
+	})
 }
