@@ -1,4 +1,4 @@
-package main
+package gosql
 
 import "github.com/arjendevos/gosql/functions"
 
