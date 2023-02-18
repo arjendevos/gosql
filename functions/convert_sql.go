@@ -13,7 +13,14 @@ func (c *GoSQLConfig) ConvertToSql(fileName, t string, models []*Model) error {
 	}
 	fileName = strings.TrimSuffix(fileName, ".gosql")
 
-	file, err := os.Create(c.SchemeDir + fileName + ".sql")
+	if err := os.RemoveAll(c.MigrationDir); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(c.MigrationDir, os.ModePerm); err != nil {
+		return err
+	}
+
+	file, err := os.Create(c.MigrationDir + "/" + fileName + ".sql")
 	if err != nil {
 		return err
 	}

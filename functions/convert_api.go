@@ -9,7 +9,6 @@ import (
 	"go/token"
 	"io/ioutil"
 	"os"
-	"strings"
 	"text/template"
 	"unicode"
 )
@@ -33,7 +32,7 @@ func (c *GoSQLConfig) ConvertApiModels(models []*Model) error {
 	moduleName := modFile.Module.Mod.Path
 
 	pkgName := config.PkgName
-	outputDir := strings.TrimSuffix(config.Output, "/"+pkgName) + "/am"
+	outputDir := c.ModelOutputDir + "/am"
 
 	if err := os.RemoveAll(outputDir); err != nil {
 		return err
@@ -46,12 +45,11 @@ func (c *GoSQLConfig) ConvertApiModels(models []*Model) error {
 		fset := token.NewFileSet()
 		f, err := parser.ParseFile(fset, fmt.Sprintf("%s/%s.go", config.Output, m.SnakeName), nil, parser.AllErrors)
 		if err != nil {
-			fmt.Println("Failed to parse file:", err)
-			os.Exit(1)
+			return fmt.Errorf("make sure you run sqlboiler first")
 		}
 
 		var imports []string
-		imports = addImport(imports, moduleName+"/"+config.Output)
+		imports = addImport(imports, moduleName+"/"+config.Output) // sql boiler models
 		relations := getRelations(f, m, pkgName)
 
 		if err := populateTemplate("templates/model.gotpl", outputDir+"/"+m.SnakeName+".go", ModelTemplateData{
@@ -62,7 +60,6 @@ func (c *GoSQLConfig) ConvertApiModels(models []*Model) error {
 		}); err != nil {
 			return err
 		}
-
 	}
 
 	return nil
@@ -70,7 +67,7 @@ func (c *GoSQLConfig) ConvertApiModels(models []*Model) error {
 }
 
 func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
-	outputDir := "api/controllers"
+	outputDir := c.ControllerOutputDir
 	if err := os.RemoveAll(outputDir); err != nil {
 		return err
 	}
@@ -93,7 +90,7 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 	var imports []string
 
 	imports = addImport(imports, moduleName+"/"+config.Output)
-	imports = addImport(imports, moduleName+strings.TrimSuffix(config.Output, "/"+pkgName)+"/am")
+	imports = addImport(imports, moduleName+"/"+c.ModelOutputDir+"/am")
 
 	if err := populateTemplate("templates/helpers.gotpl", outputDir+"/generated_helpers.go", TemplateData{PackageName: "controllers"}); err != nil {
 		return err
@@ -118,8 +115,7 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 		fset := token.NewFileSet()
 		f, err := parser.ParseFile(fset, fmt.Sprintf("%s/%s.go", config.Output, m.SnakeName), nil, parser.AllErrors)
 		if err != nil {
-			fmt.Println("Failed to parse file:", err)
-			os.Exit(1)
+			return fmt.Errorf("make sure you run sqlboiler first")
 		}
 		relations := getRelations(f, m, pkgName)
 		modelWithRelations = append(modelWithRelations, &ModelWithRelations{Model: m, Relations: relations})

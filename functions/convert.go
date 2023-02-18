@@ -2,7 +2,9 @@ package functions
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
+	"strings"
 )
 
 type GoSQLConfig struct {
@@ -13,27 +15,35 @@ type GoSQLConfig struct {
 }
 
 func Convert(c *GoSQLConfig) {
-	files, err := filepath.Glob(c.SchemeDir + "/*.gosql")
+	schemeDirEndsWithSlash := strings.HasSuffix(c.SchemeDir, "/")
+	if !schemeDirEndsWithSlash {
+		c.SchemeDir += "/"
+	}
+
+	files, err := filepath.Glob(c.SchemeDir + "**.gosql")
 	if err != nil {
 		panic(err)
 	}
 
-	for _, fileName := range files {
-		fmt.Println(fileName)
-		// sqlType, models := parseGoSQLFile(fileName)
-		// err := c.ConvertToSql(fileName, sqlType, models)
-		// if err != nil {
-		// 	panic(err)
-		// }
+	for _, filePath := range files {
+		s := strings.Split(filePath, "/")
+		fileName := s[len(s)-1]
+		sqlType, models := parseGoSQLFile(filePath)
+		err := c.ConvertToSql(fileName, sqlType, models)
+		if err != nil {
+			fmt.Println("ERR!", err)
+			os.Exit(1)
+		}
 
-		// err = c.ConvertApiModels(models)
-		// if err != nil {
-		// 	panic(err)
-		// }
+		err = c.ConvertApiModels(models)
+		if err != nil {
+			fmt.Println("ERR!", err)
+			os.Exit(1)
+		}
 
-		// err = c.ConvertApiControllers(models)
-		// if err != nil {
-		// 	panic(err)
-		// }
+		err = c.ConvertApiControllers(models)
+		if err != nil {
+			panic(err)
+		}
 	}
 }

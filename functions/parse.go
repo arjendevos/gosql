@@ -14,7 +14,6 @@ func parseGoSQLFile(fileName string) (string, []*Model) {
 	var models []*Model
 
 	fileName = strings.TrimSuffix(fileName, ".gosql")
-
 	file, err := os.Open(fileName + ".gosql")
 	if err != nil {
 		panic(err)
