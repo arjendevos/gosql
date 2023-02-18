@@ -6,5 +6,6 @@ package {{ .PackageName}}
 		{{ range $column := .Columns }}
 			{{ .CamelName }} *bool `json:"{{ firstToLower .CamelName }}"`	
 		{{- end }}
+		SelectAll *bool `json:"_all"`
 	}
 {{ end }}

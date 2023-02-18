@@ -25,16 +25,18 @@
 
 limit=3
 page=4
-filter={"hello": {"equals":"true"}}
-rels=["job": {"id": true, "name":true, "helloWorld":true}]
+filter={"column": {"equals":"true"}}
+rels={"relationTable": {"column": true, "column2":true, "column3":true}}
+rels={"relationTable":{}} // fetch all
+rels={"relationTable":{"_all":true}} // fetch all
 
 ### Todo:
 
-select={"id":true}
-filter={"hello":{"equals":true, "or": {"lessThan": 4}}}
-filter={"hello":{"equals":true, "and": {"lessThan": 4}}}
-filter={"hello":{"equals":true, "or": {"lessThan": 4, "and": {"isNotIn": ["d"]}}}}
-order=["name": "desc", "id":"ac"]
+select={"column":true}
+filter={"column":{"equals":true, "or": {"lessThan": 4}}}
+filter={"column":{"equals":true, "and": {"lessThan": 4}}}
+filter={"column":{"equals":true, "or": {"lessThan": 4, "and": {"isNotIn": ["d"]}}}}
+order=["column": "desc", "column":"ac"]
 
 ### Steps for suc6:
 
@@ -43,3 +45,6 @@ order=["name": "desc", "id":"ac"]
 3. go get gopkg.in/validator.v2
 4. go get github.com/volatiletech/null/v8
 5. go get github.com/gin-contrib/cors
+
+6. go get github.com/lib/pq
+7. go get github.com/joho/godotenv

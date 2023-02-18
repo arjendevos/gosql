@@ -17,7 +17,7 @@ type {{ .CamelName }}Controller struct {
 
 
 func (c *{{ .CamelName}}Controller) List(ctx *gin.Context) {
-	queryMods, err := Parse{{ .CamelName }}ListQueryToMods(ctx)
+	queryMods, err := parse{{ .CamelName }}ListQueryToMods(ctx)
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "invalid_request", "Invalid request", false))
 		return

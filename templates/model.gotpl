@@ -10,7 +10,7 @@ type {{ .CamelName }} struct {
     *dm.{{ .CamelName }}
 
 {{ range $relation := .Relations }}
-    {{ .Name }} {{ .Type }} {{ .Tag }}
+    {{ .Name }} {{ .Type }} `boil:"{{ toSnake .Name }}" json:"{{ toSnake .Name }}" toml:"{{ toSnake .Name }}" yaml:"{{ toSnake .Name }}"`
 {{- end }}
 }
 
@@ -25,10 +25,18 @@ func SqlBoiler{{ pluralize .CamelName }}ToApi{{ pluralize .CamelName }}(a dm.{{ 
 }
 
 func SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}(a *dm.{{ .CamelName }}) *{{ .CamelName }} {
-    return &{{ .CamelName }}{
+    p := {{ .CamelName }}{
         {{ .CamelName }}: a,
-    {{ range $relation := .Relations }}
-        {{ .Name }}: a.R.{{ .Name }},
-    {{- end }}
     }
+
+   if a.R != nil {
+        {{ range $relation := .Relations }}
+            if a.R.{{ .Name }} != nil {
+                p.{{ .Name }} = a.R.{{ .Name }}
+            }
+        {{- end }}
+   }
+
+    return &p
+ 
 }

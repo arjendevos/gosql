@@ -54,7 +54,7 @@ func (c *GoSQLConfig) ConvertApiModels(models []*Model) error {
 
 		var imports []string
 		imports = addImport(imports, moduleName+"/"+config.Output) // sql boiler models
-		relations := getRelations(f, m, pkgName)
+		relations := getRelations(f, m, pkgName, models)
 
 		if err := populateTemplate("templates/model.gotpl", outputDir+"/"+m.SnakeName+".go", ModelTemplateData{
 			PackageName: "am",
@@ -125,7 +125,7 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 		if err != nil {
 			return fmt.Errorf("make sure you run sqlboiler first")
 		}
-		relations := getRelations(f, m, pkgName)
+		relations := getRelations(f, m, pkgName, models)
 		modelWithRelations = append(modelWithRelations, &ModelWithRelations{Model: m, Relations: relations})
 
 		name := m.CamelName
@@ -237,7 +237,7 @@ func parseTemplate(c *TemplateConfig) (string, error) {
 	return string(formattedContent), nil
 }
 
-func getRelations(f *ast.File, m *Model, pkgName string) []*ModelTemplateRelation {
+func getRelations(f *ast.File, m *Model, pkgName string, models []*Model) []*ModelTemplateRelation {
 	var relations []*ModelTemplateRelation
 	lowerName := firstToLower(m.CamelName)
 
@@ -280,9 +280,23 @@ func getRelations(f *ast.File, m *Model, pkgName string) []*ModelTemplateRelatio
 							panic(err)
 						}
 
+						singularName := field.Names[0].Name
+						if isPlural(singularName) {
+							singularName = singularize(field.Names[0].Name)
+						}
+
+						var columns []*Column
+						for _, m := range models {
+							if m.CamelName == singularName {
+								columns = m.Columns
+							}
+						}
+
 						r := ModelTemplateRelation{
-							Name: field.Names[0].Name,
-							Type: fieldType,
+							Name:         field.Names[0].Name,
+							SingularName: singularName,
+							Type:         fieldType,
+							Columns:      columns,
 						}
 
 						if field.Tag != nil {

@@ -23,7 +23,7 @@ import (
 		relations, relationsExists := context.GetQuery("rels")
 
 		if !pageExists {
-			page = "1"
+			page = "0"
 		}
 
 		if !limitExists {
@@ -67,7 +67,7 @@ import (
 		}, nil
 	}
 
-	func Parse{{ .CamelName }}ListQueryToMods(context *gin.Context) ([]qm.QueryMod, error) {
+	func parse{{ .CamelName }}ListQueryToMods(context *gin.Context) ([]qm.QueryMod, error) {
 		query, err := parse{{ .CamelName }}ListQuery(context)
 		if err != nil {
 			return nil, err

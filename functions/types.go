@@ -61,9 +61,11 @@ type ControllerTemplateData struct {
 }
 
 type ModelTemplateRelation struct {
-	Name string
-	Type string
-	Tag  string
+	Name         string
+	SingularName string
+	Columns      []*Column
+	Type         string
+	Tag          string
 }
 
 type ModelTemplateData struct {

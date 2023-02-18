@@ -10,7 +10,7 @@ import (
 {{ range $controller := .Controllers }}
     type {{ .CamelName}}Relations struct {
         {{ range $relation := .Relations }}
-            {{ .Name }} *Select{{ $controller.CamelName }}Columns `boil:"{{ firstToLower .Name }}" json:"{{ firstToLower .Name}}" toml:"{{ firstToLower .Name}}" yaml:"{{ firstToLower .Name}}"`
+            {{ .Name }} *Select{{ .SingularName }}Columns `boil:"{{ firstToLower .Name }}" json:"{{ firstToLower .Name}}" toml:"{{ firstToLower .Name}}" yaml:"{{ firstToLower .Name}}"`
         {{- end }}
     }
 
@@ -25,21 +25,30 @@ import (
 
 	func parse{{ .CamelName}}RelationsToMods(relations *{{ .CamelName}}Relations) ([]qm.QueryMod, error) {
 		var queryMods []qm.QueryMod
-		var selectColumns []string
+
+		queryMods = append(queryMods, qm.Select("*"))
 
 		{{ range $relation := .Relations }}
 			if relations.{{ .Name }} != nil {
-				{{ range $column := $controller.Columns }}
+				var selectColumns []string
+
+				{{ range $column := .Columns }}
 					if relations.{{ $relation.Name }}.{{ .CamelName }} != nil && *relations.{{ $relation.Name }}.{{ .CamelName }} {
 						selectColumns = append(selectColumns, "{{.SnakeName }}")
 					}
 				{{- end }}
+
+				if relations.{{ $relation.Name }}.SelectAll != nil && *relations.{{ $relation.Name }}.SelectAll {
+					selectColumns = append(selectColumns, "*")
+				}
+
+				if len(selectColumns) == 0 {
+					selectColumns = append(selectColumns, "*")
+				}
+
+				queryMods = append(queryMods, qm.Load("{{ .Name }}", qm.Select(selectColumns...)))
 			}
 		{{- end }}
-
-		if len(selectColumns) > 0 {
-			queryMods = append(queryMods, qm.Select(selectColumns...))
-		}
 
 		return queryMods, nil
 	}

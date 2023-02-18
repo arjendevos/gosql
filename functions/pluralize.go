@@ -22,3 +22,23 @@ func pluralize(word string) string {
 		return word + "s"
 	}
 }
+
+func isPlural(word string) bool {
+	if len(word) > 1 && word[len(word)-1] == 's' {
+		// Most plural words end in "s"
+		return true
+	}
+	if len(word) > 2 && word[len(word)-2:] == "es" {
+		// Some plural words end in "es"
+		return true
+	}
+	if len(word) > 2 && word[len(word)-2:] == "en" {
+		// Some irregular plural words end in "en"
+		return true
+	}
+	if len(word) > 3 && word[len(word)-3:] == "ies" {
+		// Some singular words end in "y" and change to "ies" when pluralized
+		return true
+	}
+	return false
+}
