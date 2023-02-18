@@ -23,20 +23,21 @@
 
 ### Current query possibility:
 
-limit=3
-page=4
-filter={"column": {"equals":"true"}}
-rels={"relationTable": {"column": true, "column2":true, "column3":true}}
-rels={"relationTable":{}} // fetch all
-rels={"relationTable":{"_all":true}} // fetch all
+- limit=3
+- page=4
+- filter={"column": {"equals":"true"}}
+- rels={"relationTable": {"column": true, "column2":true, "column3":true}}
+- rels={"relationTable":{}} // fetch all
+- rels={"relationTable":{"_all":true}} // fetch all
 
 ### Todo:
 
-select={"column":true}
-filter={"column":{"equals":true, "or": {"lessThan": 4}}}
-filter={"column":{"equals":true, "and": {"lessThan": 4}}}
-filter={"column":{"equals":true, "or": {"lessThan": 4, "and": {"isNotIn": ["d"]}}}}
-order=["column": "desc", "column":"ac"]
+- select={"column":true}
+- filter={"column":{"equals":true, "or": {"lessThan": 4}}}
+- filter={"column":{"equals":true, "and": {"lessThan": 4}}}
+- filter={"column":{"equals":true, "or": {"lessThan": 4, "and": {"isNotIn": ["d"]}}}}
+- order=["column": "desc", "column":"ac"]
+- rels={"relationTable":{"_limit":4, "_page":1}} // limit relation array
 
 ### Steps for suc6:
 
