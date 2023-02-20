@@ -14,6 +14,7 @@ import (
 		Limit  int    `json:"limit"`
 		Filter *{{ .CamelName }}Filter `json:"filter"`
 		Relations *{{ .CamelName }}Relations `json:"relations"`
+		Orders *{{ .CamelName }}OrderColumns `json:"orders"`
 	}
 
 	func parse{{ .CamelName }}ListQuery(context *gin.Context) (*{{ .CamelName }}ListQuery, error) {
@@ -21,6 +22,7 @@ import (
 		limit, limitExists := context.GetQuery("limit")
 		filter, filterExists := context.GetQuery("filter")
 		relations, relationsExists := context.GetQuery("rels")
+		orders, ordersExists := context.GetQuery("order")
 
 		if !pageExists {
 			page = "0"
@@ -38,12 +40,21 @@ import (
 			relations = "{}"
 		}
 
+		if !ordersExists {
+			orders = "{}"
+		}
+
 		f, err := parse{{ .CamelName }}Filter(filter)
 		if err != nil {
 			return nil, err
 		}
 
 		r, err := parse{{ .CamelName }}Relations(relations)
+		if err != nil {
+			return nil, err
+		}
+
+		o, err := parse{{ .CamelName }}Orders(orders)
 		if err != nil {
 			return nil, err
 		}
@@ -64,6 +75,7 @@ import (
 			Limit:  limitInInt,
 			Filter: f,
 			Relations: r,
+			Orders: o,
 		}, nil
 	}
 
@@ -92,6 +104,15 @@ import (
 				return nil, err
 			}
 			queryMods = append(queryMods, relationQueryMods...)
+		}
+
+
+		if query.Orders != nil {
+			ordersQueryMods, err := parse{{ .CamelName }}OrdersToMods(query.Orders)
+			if err != nil {
+				return nil, err
+			}
+			queryMods = append(queryMods, ordersQueryMods...)
 		}
 
 		return queryMods, nil

@@ -1,51 +1,51 @@
-# Model types
+# SQL generator & REST api generator based on SQLboiler
 
-## IDs
+Current implementation is only done for postgresql, though other sql databases like mysql should be easy to implement due to simular features. REST api is build on [gin-gonic](github.com/gin-gonic/gin).
 
-1. id uuid @unique @default(uuid_generate_v4()) @index
-2. id int @unique @default(autoincrement) @index
+## Model types
 
-## Types
+### IDs
 
-1. string
-2. bool
-3. text
-4. DateTime
-5. int
+- [x] id uuid @unique @default(uuid_generate_v4()) @index
+- [x] id int @unique @default(autoincrement) @index
 
-## TODO
+### Types
 
-1. Add order by possibility
-2. Add select columns (normal not on relations)
-3. Add rest of the endpoints with bodies etc
-4. Add or & and possibility in filter
-5. Export to typescript types
+- [x] string
+- [x] bool
+- [x] text
+- [x] DateTime
+- [x] int
 
-### Current query possibility:
+### TODO
 
-- limit=3
-- page=4
-- filter={"column": {"equals":"true"}}
-- rels={"relationTable": {"column": true, "column2":true, "column3":true}}
-- rels={"relationTable":{}} // fetch all
-- rels={"relationTable":{"_all":true}} // fetch all
+- [x] Add order by possibility
+- [] Add select columns (normal not on relations) // Not possible for now due to the sqlboiler implementation
+- [] Add rest of the endpoints with bodies etc
+- [] Add or & and possibility in filter
+- [] Export to typescript types
+- [] Generate postgresql database setup files (client & migrations)
+- [] Auto install deps
 
-### Todo:
+### REST api -> query possibilities:
 
-- select={"column":true}
-- filter={"column":{"equals":true, "or": {"lessThan": 4}}}
-- filter={"column":{"equals":true, "and": {"lessThan": 4}}}
-- filter={"column":{"equals":true, "or": {"lessThan": 4, "and": {"isNotIn": ["d"]}}}}
-- order=["column": "desc", "column":"ac"]
-- rels={"relationTable":{"_limit":4, "_page":1}} // limit relation array
+- [x] limit=3
+- [x] page=4
+- [x] filter={"column": {"equals":"true"}}
+- [x] rels={"relationTable":true}
+- [x] order={"column": "desc", "column":"asc"}
+- [] filter={"column":{"equals":true, "or": {"lessThan": 4}}}
+- [] filter={"column":{"equals":true, "and": {"lessThan": 4}}}
+- [] filter={"column":{"equals":true, "or": {"lessThan": 4, "and": {"isNotIn": ["d"]}}}}
+- [] rels={"relationTable":{"\_limit":4, "\_page":1}} // limit relation array -> only for nToMany relations
+- [] select={"column":true"}
 
-### Steps for suc6:
+### Steps for setting up an api:
 
 1. go get github.com/gin-gonic/gin
 2. go get github.com/volatiletech/sqlboiler/v4
 3. go get gopkg.in/validator.v2
 4. go get github.com/volatiletech/null/v8
 5. go get github.com/gin-contrib/cors
-
 6. go get github.com/lib/pq
 7. go get github.com/joho/godotenv

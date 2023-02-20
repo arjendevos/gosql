@@ -108,11 +108,15 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 	if err := populateTemplate("templates/client.gotpl", outputDir+"/generated_client.go", GeneralTemplateData{PackageName: "controllers", Controllers: models}); err != nil {
 		return err
 	}
-	if err := populateTemplate("templates/selects.gotpl", outputDir+"/generated_selects.go", GeneralTemplateData{PackageName: "controllers", Controllers: models}); err != nil {
+	if err := populateTemplate("templates/columns.gotpl", outputDir+"/generated_columns.go", GeneralTemplateData{PackageName: "controllers", Controllers: models}); err != nil {
 		return err
 	}
 
 	if err := populateTemplate("templates/routes.gotpl", outputDir+"/generated_routes.go", GeneralTemplateData{PackageName: "controllers", Controllers: models}); err != nil {
+		return err
+	}
+
+	if err := populateTemplate("templates/orders.gotpl", outputDir+"/generated_orders.go", GeneralTemplateData{PackageName: "controllers", Controllers: models}); err != nil {
 		return err
 	}
 

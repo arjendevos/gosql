@@ -2,10 +2,9 @@
 package {{ .PackageName}}
 
 {{ range $controller := .Controllers }}
-   type Select{{ .CamelName }}Columns struct {
+   type {{ .CamelName }}Columns struct {
 		{{ range $column := .Columns }}
-			{{ .CamelName }} *bool `json:"{{ firstToLower .CamelName }}"`	
+			{{ .CamelName }} *string `json:"{{ firstToLower .CamelName }}"`	
 		{{- end }}
-		SelectAll *bool `json:"_all"`
 	}
 {{ end }}
