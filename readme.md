@@ -20,12 +20,12 @@ Current implementation is only done for postgresql, though other sql databases l
 ### TODO
 
 - [x] Add order by possibility
-- [] Add select columns (normal not on relations) // Not possible for now due to the sqlboiler implementation
-- [] Add rest of the endpoints with bodies etc
-- [] Add or & and possibility in filter
-- [] Export to typescript types
-- [] Generate postgresql database setup files (client & migrations)
-- [] Auto install deps
+- [ ] Add select columns (normal not on relations) // Not possible for now due to the sqlboiler implementation
+- [ ] Add rest of the endpoints with bodies etc
+- [ ] Add or & and possibility in filter
+- [ ] Export to typescript types
+- [ ] Generate postgresql database setup files (client & migrations)
+- [ ] Auto install deps
 
 ### REST api -> query possibilities:
 
@@ -34,11 +34,11 @@ Current implementation is only done for postgresql, though other sql databases l
 - [x] filter={"column": {"equals":"true"}}
 - [x] rels={"relationTable":true}
 - [x] order={"column": "desc", "column":"asc"}
-- [] filter={"column":{"equals":true, "or": {"lessThan": 4}}}
-- [] filter={"column":{"equals":true, "and": {"lessThan": 4}}}
-- [] filter={"column":{"equals":true, "or": {"lessThan": 4, "and": {"isNotIn": ["d"]}}}}
-- [] rels={"relationTable":{"\_limit":4, "\_page":1}} // limit relation array -> only for nToMany relations
-- [] select={"column":true"}
+- [ ] filter={"column":{"equals":true, "or": {"lessThan": 4}}}
+- [ ] filter={"column":{"equals":true, "and": {"lessThan": 4}}}
+- [ ] filter={"column":{"equals":true, "or": {"lessThan": 4, "and": {"isNotIn": ["d"]}}}}
+- [ ] rels={"relationTable":{"\_limit":4, "\_page":1}} // limit relation array -> only for nToMany relations
+- [ ] select={"column":true"}
 
 ### Steps for setting up an api:
 
