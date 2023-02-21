@@ -20,12 +20,13 @@ Current implementation is only done for postgresql, though other sql databases l
 ### TODO
 
 - [x] Add order by possibility
-- [ ] Add select columns (normal not on relations) // Not possible for now due to the sqlboiler implementation
-- [ ] Add rest of the endpoints with bodies etc
+- [x] Add rest of the endpoints with bodies etc
+- [ ] Create unique function for in create and unique + externalize it into a predefined slice
 - [ ] Add or & and possibility in filter
 - [ ] Export to typescript types
 - [ ] Generate postgresql database setup files (client & migrations)
 - [ ] Auto install deps
+- [ ] Add select columns (normal not on relations) // Not possible for now due to the sqlboiler implementation
 
 ### REST api -> query possibilities:
 

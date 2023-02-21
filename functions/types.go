@@ -25,10 +25,12 @@ type Column struct {
 	CamelName  string
 	Type       *Type
 	Attributes []*Attribute
+	IsRelation bool
 }
 
 type Type struct {
 	Name                   string
+	GoTypeName             string
 	IsNullable             bool
 	HasDifferentCharLength bool
 	CharLength             int
@@ -49,15 +51,30 @@ type GeneralTemplateData struct {
 	Controllers []*Model
 }
 
+type CreateAndUpdateDataModel struct {
+	SnakeName     string
+	CamelName     string
+	CreateColumns []*Column
+	UpdateColumns []*Column
+}
+
+type CreateAndUpdateData struct {
+	PackageName string
+	Controllers []*CreateAndUpdateDataModel
+	Imports     []string
+}
+
 type SelectTemplateData struct {
 	PackageName string
 	Controllers []*ModelWithRelations
 }
 
 type ControllerTemplateData struct {
-	PackageName string
-	CamelName   string
-	Imports     []string
+	PackageName   string
+	CamelName     string
+	Imports       []string
+	CreateColumns []*Column
+	UpdateColumns []*Column
 }
 
 type ModelTemplateRelation struct {

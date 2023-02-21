@@ -18,31 +18,11 @@ import (
 	}
 
 	func parse{{ .CamelName }}ListQuery(context *gin.Context) (*{{ .CamelName }}ListQuery, error) {
-		page, pageExists := context.GetQuery("page")
-		limit, limitExists := context.GetQuery("limit")
-		filter, filterExists := context.GetQuery("filter")
-		relations, relationsExists := context.GetQuery("rels")
-		orders, ordersExists := context.GetQuery("order")
-
-		if !pageExists {
-			page = "0"
-		}
-
-		if !limitExists {
-			limit = "10"
-		}
-
-		if !filterExists {
-			filter = "{}"
-		}
-
-		if !relationsExists {
-			relations = "{}"
-		}
-
-		if !ordersExists {
-			orders = "{}"
-		}
+		page := context.DefaultQuery("page", "0")
+		limit := context.DefaultQuery("limit", "10")
+		filter := context.DefaultQuery("filter", "{}")
+		relations := context.DefaultQuery("rels", "{}")
+		orders := context.DefaultQuery("order", "{}")
 
 		f, err := parse{{ .CamelName }}Filter(filter)
 		if err != nil {
@@ -116,5 +96,17 @@ import (
 		}
 
 		return queryMods, nil
+	}
+
+	func parse{{ .CamelName }}ByIDParamToMods(context *gin.Context) ([]qm.QueryMod, error) {
+		id := context.Param("id")
+		idInInt, err := strconv.Atoi(id)
+		if err != nil {
+			return nil, err
+		}
+
+		return []qm.QueryMod{
+			qm.Where("id = ?", idInInt),
+		}, nil
 	}
 {{ end }}

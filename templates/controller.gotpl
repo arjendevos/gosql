@@ -2,9 +2,14 @@
 package {{ .PackageName}}
 
 import (
+	"database/sql"
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/volatiletech/sqlboiler/v4/boil"
+	"github.com/volatiletech/sqlboiler/v4/queries/qm"
+
 
 {{ range $v := .Imports }}
     "{{ . }}"
@@ -30,4 +35,114 @@ func (c *{{ .CamelName}}Controller) List(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, responseWithPayload(am.SqlBoiler{{ pluralize .CamelName }}ToApi{{ pluralize .CamelName }}(payload), nil, nil, true))
+}
+
+func (c *{{ .CamelName}}Controller) ByID(ctx *gin.Context) {
+	queryMods, err := parse{{ .CamelName }}ByIDParamToMods(ctx)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "invalid_request", "Invalid request", false))
+		return
+	}
+
+	payload, err := dm.{{pluralize .CamelName}}( queryMods...).One(ctx, c.db)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "generic", "Something went wrong", false))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, responseWithPayload(am.SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}(payload), nil, nil, true))
+}
+
+func (c *{{ .CamelName}}Controller) Create(ctx *gin.Context) {
+	body, err := parse{{ .CamelName }}CreateBody(ctx)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "invalid_request", "Invalid request", false))
+		return
+	}
+
+	// TODO: place in another function + externalize it without runtime function
+	var queryMods []qm.QueryMod
+	{{ $controller := .}}
+	{{- $controllerCamelName := .CamelName}}
+	{{- range $column := .CreateColumns }}
+		{{- if isUnique . }}
+			{{- if isNotFirstUnique $controller.CreateColumns $column }}
+				queryMods = append(queryMods, qm.Or2(dm.{{ $controllerCamelName }}Where.{{ .CamelName }}.EQ(body.{{ .CamelName }})))
+			{{- else }}
+				queryMods = append(queryMods, dm.{{ $controllerCamelName }}Where.{{ .CamelName }}.EQ(body.{{ .CamelName }}))
+			{{- end}}
+		{{- end}}
+	{{- end}}
+
+	if len(queryMods) > 0 {
+		count, err := dm.{{pluralize .CamelName}}(queryMods...).Count(ctx, c.db)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "invalid_request", "Invalid request", false))
+			return
+		}
+		if count > 0 {
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "duplicate", "Duplicate entry", false))
+			return
+		}
+	}
+
+	model := {{ firstToLower .CamelName}}CreateBodyToSqlBoiler(body)
+	err = model.Insert(ctx, c.db, boil.Infer())
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "generic", "Something went wrong", false))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, responseWithPayload(am.SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}(model), nil, nil, true))
+}
+
+func (c *{{ .CamelName}}Controller) Update(ctx *gin.Context) {
+	queryMods, err := parse{{ .CamelName }}ByIDParamToMods(ctx)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "invalid_request", "Invalid request", false))
+		return
+	}
+
+	body, err := parse{{ .CamelName }}UpdateBody(ctx)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "invalid_request", "Invalid request", false))
+		return
+	}
+
+	existing, err := dm.{{pluralize .CamelName}}(queryMods...).One(ctx, c.db)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "generic", "Something went wrong", false))
+		return
+	}
+
+	model := {{ firstToLower .CamelName}}UpdateBodyToSqlBoiler(body, existing)
+	_, err = model.Update(ctx, c.db, boil.Infer())
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "generic", "Something went wrong", false))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, responseWithPayload(am.SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}(existing), nil, nil, true))
+}
+
+func (c *{{ .CamelName}}Controller) Delete(ctx *gin.Context) {
+	queryMods, err := parse{{ .CamelName }}ByIDParamToMods(ctx)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "invalid_request", "Invalid request", false))
+		return
+	}
+
+	existing, err := dm.{{pluralize .CamelName}}(queryMods...).One(ctx, c.db)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "generic", "Something went wrong", false))
+		return
+	}
+
+	_, err = existing.Delete(ctx, c.db)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "generic", "Something went wrong", false))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, responseWithPayload("ok", nil, nil, true))
 }

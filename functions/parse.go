@@ -113,11 +113,14 @@ func parseGoSQLFile(fileName string) (string, []*Model) {
 				t.Name = strings.ReplaceAll(t.Name, match[0], "")
 			}
 
+			t.GoTypeName = getGotype(t.Name)
+
 			columns = append(columns, &Column{
 				SnakeName:  camelToSnake(splittedLine[0]),
 				CamelName:  snakeToCamel(splittedLine[0]),
 				Type:       t,
 				Attributes: attributes,
+				IsRelation: isRelation(t.Name),
 			})
 		}
 
@@ -149,6 +152,23 @@ func parseGoSQLFile(fileName string) (string, []*Model) {
 }
 
 func snakeToCamel(s string) string {
+	s = camelToSnake(s)
+
+	if strings.Contains(strings.ToLower(s), "id") {
+		i := strings.Index(strings.ToLower(s), "id")
+		if len(s) <= i+2 {
+			s = strings.ReplaceAll(strings.ToLower(s), "id", "ID")
+		}
+	}
+
+	if strings.Contains(strings.ToLower(s), "url") {
+		s = strings.ReplaceAll(strings.ToLower(s), "url", "URL")
+	}
+
+	if strings.Contains(strings.ToLower(s), "csfr") {
+		s = strings.ReplaceAll(strings.ToLower(s), "csfr", "CSFR")
+	}
+
 	s = strings.ReplaceAll(s, "_", " ")
 	s = strings.Title(s)
 	s = strings.ReplaceAll(s, " ", "")
@@ -168,4 +188,29 @@ func camelToSnake(input string) string {
 		}
 	}
 	return output.String()
+}
+
+func getGotype(t string) string {
+	switch t {
+	case "string":
+		return "string"
+	case "text":
+		return "string"
+	case "uuid":
+		return "string"
+	case "int":
+		return "int"
+	case "bool":
+		return "bool"
+	case "dateTime":
+		return "time.Time"
+	case "uint":
+		return "uint"
+	default:
+		return "unknown type"
+	}
+}
+
+func isRelation(s string) bool {
+	return unicode.IsUpper(rune(s[0]))
 }

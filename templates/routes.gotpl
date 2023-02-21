@@ -34,6 +34,10 @@ func RunApi(db *sql.DB, c *ApiConfig) {
 {{ range $controller := .Controllers }}
     {{ firstToLower .CamelName }} := router.Group("/{{ .SnakeName }}")
     {{ firstToLower .CamelName }}.GET("", controllers.{{ .CamelName}}.List)
+    {{ firstToLower .CamelName }}.GET(":id", controllers.{{ .CamelName}}.ByID)
+    {{ firstToLower .CamelName }}.POST("", controllers.{{ .CamelName}}.Create)
+    {{ firstToLower .CamelName }}.PATCH(":id", controllers.{{ .CamelName}}.Update)
+    {{ firstToLower .CamelName }}.DELETE(":id", controllers.{{ .CamelName}}.Delete)
 {{ end }}
 
     panic(router.Run())

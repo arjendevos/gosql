@@ -12,6 +12,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"text/template"
 	"unicode"
 )
@@ -122,6 +123,10 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 
 	// Build the controllers
 	var modelWithRelations []*ModelWithRelations
+	var createAndUpdateData []*CreateAndUpdateDataModel
+
+	var modelImports []string
+	modelImports = addImport(modelImports, moduleName+"/"+config.Output)
 
 	for _, m := range models {
 		fset := token.NewFileSet()
@@ -132,18 +137,49 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 		relations := getRelations(f, m, pkgName, models)
 		modelWithRelations = append(modelWithRelations, &ModelWithRelations{Model: m, Relations: relations})
 
-		name := m.CamelName
+		createColumns, updateColumns, mImports := getCreateAndUpdateColumns(m)
 
-		if err := populateTemplate("templates/controller.gotpl", outputDir+"/generated_"+m.SnakeName+"_controller.go", ControllerTemplateData{PackageName: "controllers", CamelName: name, Imports: imports}); err != nil {
+		if err := populateTemplate("templates/controller.gotpl", outputDir+"/generated_"+m.SnakeName+"_controller.go", ControllerTemplateData{PackageName: "controllers", CamelName: m.CamelName, Imports: imports, CreateColumns: createColumns, UpdateColumns: updateColumns}); err != nil {
 			return err
 		}
+
+		modelImports = append(modelImports, mImports...)
+		createAndUpdateData = append(createAndUpdateData, &CreateAndUpdateDataModel{
+			SnakeName:     m.SnakeName,
+			CamelName:     m.CamelName,
+			CreateColumns: createColumns,
+			UpdateColumns: updateColumns,
+		})
 	}
 
 	if err := populateTemplate("templates/relations.gotpl", outputDir+"/generated_relations.go", SelectTemplateData{PackageName: "controllers", Controllers: modelWithRelations}); err != nil {
 		return err
 	}
 
+	if err := populateTemplate("templates/bodies.gotpl", outputDir+"/generated_bodies.go", CreateAndUpdateData{PackageName: "controllers", Controllers: createAndUpdateData, Imports: modelImports}); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func getCreateAndUpdateColumns(m *Model) ([]*Column, []*Column, []string) {
+	var createColumns []*Column
+	var updateColumns []*Column
+	var imports []string
+
+	for _, c := range m.Columns {
+		if !c.IsRelation && c.SnakeName != "id" && c.SnakeName != "created_at" && c.SnakeName != "updated_at" {
+			createColumns = append(createColumns, c)
+			updateColumns = append(updateColumns, c)
+
+			if c.Type.GoTypeName == "time.Time" {
+				imports = addImport(imports, "time")
+			}
+		}
+	}
+
+	return createColumns, updateColumns, imports
 }
 
 func addImport(imports []string, importName string) []string {
@@ -221,6 +257,69 @@ func parseTemplate(c *TemplateConfig) (string, error) {
 		"toSnake":      camelToSnake,
 		"pluralize":    pluralize,
 		"firstToLower": firstToLower,
+		"isFalse": func(a bool) bool {
+			return !a
+		},
+		"getValidate": func(c *Column) string {
+			var v []string
+			var canBeEmpty bool
+
+			for _, attr := range c.Attributes {
+				if attr.Name == "regexp" && attr.HasValue {
+					v = append(v, "regexp="+strings.ReplaceAll(attr.Value, "'", ""))
+				}
+
+				if attr.Name == "default" {
+					canBeEmpty = true
+				}
+			}
+
+			if !c.Type.IsNullable && !canBeEmpty {
+				v = append(v, "nonzero")
+			}
+
+			if len(v) > 0 {
+				return fmt.Sprintf(" validate:\"%s\"", strings.Join(v, ","))
+			}
+
+			return ""
+		},
+		"isUnique": func(c *Column) bool {
+			for _, attr := range c.Attributes {
+				if attr.Name == "unique" {
+					return true
+				}
+			}
+
+			return false
+		},
+		"isNotFirstUnique": func(cs []*Column, cl *Column) bool {
+			count := 0
+			for _, c := range cs {
+				if c.SnakeName == cl.SnakeName {
+					return count > 0
+				}
+				for _, attr := range c.Attributes {
+					if attr.Name == "unique" {
+						count++
+					}
+				}
+			}
+			return false
+		},
+		"isNullable": func(c *Column) bool {
+			if c.Type.IsNullable {
+				return true
+			}
+
+			for _, attr := range c.Attributes {
+				if attr.Name == "default" {
+					return true
+				}
+			}
+
+			return false
+		},
 	}).Parse(c.Template)
 	if err != nil {
 		return "", fmt.Errorf("parse: %v", err)

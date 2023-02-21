@@ -38,5 +38,4 @@ func SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}(a *dm.{{ .CamelName }}) *{{ 
    }
 
     return &p
- 
 }
