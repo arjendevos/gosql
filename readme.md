@@ -6,12 +6,12 @@ Current implementation is only done for postgresql, though other sql databases l
 
 | Type                    | PSQL Generator | API Generator |
 | ----------------------- | -------------- | ------------- |
-| `string`, `string(255)` | [x]            | [x]           |
-| `bool`                  | [x]            | [x]           |
-| `text`                  | [x]            | [x]           |
-| `dateTime`              | [x]            | [x]           |
-| `int`                   | [x]            | [x]           |
-| `any`                   | [x]            | [ ]           |
+| `string`, `string(255)` | - [x]          | - [x]         |
+| `bool`                  | - [x]          | - [x]         |
+| `text`                  | - [x]          | - [x]         |
+| `dateTime`              | - [x]          | - [x]         |
+| `int`                   | - [x]          | - [x]         |
+| `any`                   | - [x]          | - [ ]         |
 
 ### IDs
 
