@@ -12,6 +12,7 @@ type Client struct {
 }
 
 type Controllers struct {
+	Auth *AuthController
     {{ range $controller := .Controllers }}
         {{ .CamelName }} *{{ .CamelName }}Controller
     {{- end }}
@@ -21,6 +22,7 @@ func newClient(db *sql.DB) *Controllers {
 	ctx := context.Background()
 	client := &Client{db: db, ctx: ctx}
 	return &Controllers{
+		Auth: &AuthController{client},
         {{ range $controller := .Controllers }}
             {{ .CamelName }}: &{{ .CamelName }}Controller{client},
         {{- end }}

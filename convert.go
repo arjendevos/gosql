@@ -20,6 +20,6 @@ func Convert(c *GoSQLConfig) {
 		SchemeDir:           dir + "/" + c.SchemeDir,
 		MigrationDir:        dir + "/" + c.MigrationDir,
 		ModelOutputDir:      c.ModelOutputDir,
-		ControllerOutputDir: dir + "/" + c.ControllerOutputDir,
+		ControllerOutputDir: c.ControllerOutputDir,
 	})
 }

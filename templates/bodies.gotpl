@@ -12,17 +12,13 @@ import (
 {{ range $controller := .Controllers }}
 	type {{ .CamelName }}CreateBody struct {
 		{{ range $column := .CreateColumns }}
-			{{- if isFalse .IsRelation }}
-				{{ .CamelName }} {{ if isNullable . }}*{{- end}}{{ .Type.GoTypeName }} `json:"{{ firstToLower .CamelName }}"{{ getValidate .}}`
-			{{- end }}
+			{{ .CamelName }} {{ if isNullableForInput . }}*{{- end}}{{ .Type.GoTypeName }} `json:"{{ .SnakeName }}"{{ getValidate .}}`
 		{{- end }}
 	}
 	
 	type {{ .CamelName }}UpdateBody struct {
 		{{ range $column := .UpdateColumns }}
-			{{- if isFalse .IsRelation }}
-				{{ .CamelName }} *{{ .Type.GoTypeName }} `json:"{{ firstToLower .CamelName }}"{{ getValidate .}}`
-			{{- end }}
+			{{ .CamelName }} *{{ .Type.GoTypeName }} `json:"{{  .SnakeName }}"{{ getValidate .}}`
 		{{- end }}
 	}
 
@@ -38,7 +34,7 @@ import (
 	func {{firstToLower .CamelName}}CreateBodyToSqlBoiler(body *{{ .CamelName }}CreateBody) *dm.{{ .CamelName }} {
 		model := dm.{{ .CamelName }}{
 			{{- range $column := .CreateColumns }}
-				{{- if isNullable .}}
+				{{- if isNullableForInput .}}
 				{{- else}}
 					{{ .CamelName }}: body.{{ .CamelName }},
 				{{- end}}
@@ -46,9 +42,13 @@ import (
 		}
 
 		{{ range $column := .UpdateColumns }}
-		{{- if isNullable .}}
+		{{- if isNullableForInput .}}
 			if body.{{ .CamelName }} != nil {
+			{{- if isNullableDBType .}}
+				model.{{ .CamelName }} = null.{{ firstToUpper .Type.GoTypeName}}From(*body.{{ .CamelName }})
+			{{- else }}
 				model.{{ .CamelName }} = *body.{{ .CamelName }}
+			{{- end}}
 			}
 		{{- end}}
 		{{- end }}
@@ -65,9 +65,13 @@ import (
 	}
 
 	func {{ firstToLower .CamelName}}UpdateBodyToSqlBoiler(body *{{ .CamelName }}UpdateBody, oldModel *dm.{{ .CamelName }}) *dm.{{ .CamelName }} {
-		{{ range $column := .UpdateColumns }}
+		{{- range $column := .UpdateColumns }}
 			if body.{{ .CamelName }} != nil {
-				oldModel.{{ .CamelName }} = *body.{{ .CamelName }}
+				{{- if isNullableDBType .}}
+					oldModel.{{ .CamelName }} = null.{{ firstToUpper .Type.GoTypeName}}From(*body.{{ .CamelName }})
+				{{- else }}
+					oldModel.{{ .CamelName }} = *body.{{ .CamelName }}
+				{{- end}}
 			}
 		{{- end }}
 		return oldModel

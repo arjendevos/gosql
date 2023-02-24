@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"unicode"
 )
 
 func (c *GoSQLConfig) ConvertToSql(fileName, t string, models []*Model) error {
@@ -33,13 +32,14 @@ func (c *GoSQLConfig) ConvertToSql(fileName, t string, models []*Model) error {
 		var ak = 1
 		var fk = 1
 		var idx = 1
+		var requiresUuidExtension bool
 
 		tableName := strings.ToLower(m.SnakeName)
 		file.WriteString("CREATE TABLE " + tableName + " (\n")
 		for _, c := range m.Columns {
 			var line string
 
-			t, isRelation := convertType(tableName, c, func(constraintType string) {
+			t, isRelation, rUe := convertType(tableName, c, func(constraintType string) {
 				var constraint string
 				if constraintType == "ID" {
 					constraint = fmt.Sprintf("CONSTRAINT %v_pk PRIMARY KEY (%v)", tableName, c.SnakeName)
@@ -51,6 +51,10 @@ func (c *GoSQLConfig) ConvertToSql(fileName, t string, models []*Model) error {
 				constraints = append(constraints, constraint)
 			})
 
+			if rUe {
+				requiresUuidExtension = true
+			}
+
 			if isRelation {
 
 				// Check if exists in models
@@ -61,7 +65,7 @@ func (c *GoSQLConfig) ConvertToSql(fileName, t string, models []*Model) error {
 						exists = true
 						for _, co := range m.Columns {
 							if strings.EqualFold(co.SnakeName, "id") {
-								relationType, _ = convertType(tableName, co, func(constraintType string) {})
+								relationType, _, _ = convertType(tableName, co, func(constraintType string) {})
 								if relationType == "SERIAL" {
 									relationType = "INTEGER"
 								}
@@ -135,6 +139,10 @@ func (c *GoSQLConfig) ConvertToSql(fileName, t string, models []*Model) error {
 
 		file.WriteString(");\n")
 
+		if requiresUuidExtension {
+			file.WriteString("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";\n")
+		}
+
 		for _, index := range indexes {
 			line := fmt.Sprintf("%v;", index)
 			file.WriteString(line + "\n")
@@ -147,11 +155,16 @@ func (c *GoSQLConfig) ConvertToSql(fileName, t string, models []*Model) error {
 
 }
 
-func convertType(tableName string, c *Column, cb func(constraint string)) (typeName string, isRelation bool) {
+func convertType(tableName string, c *Column, cb func(constraint string)) (typeName string, isRelation bool, requiresUuidExtension bool) {
 	for _, a := range c.Attributes {
 		if a.Name == "default" && a.HasValue && a.Value == "autoincrement" && c.Type.Name == "int" {
 			cb("ID")
-			return "SERIAL", false
+			return "SERIAL", false, false
+		}
+
+		if a.Name == "default" && a.HasValue && a.Value == "uuid" && c.Type.Name == "uuid" {
+			cb("ID")
+			return "UUID", false, true
 		}
 
 		if a.Name == "unique" {
@@ -159,30 +172,26 @@ func convertType(tableName string, c *Column, cb func(constraint string)) (typeN
 		}
 	}
 
-	if isRel(c.Type.Name) {
-		return strings.ToLower(camelToSnake(c.Type.Name)), true
+	if c.IsRelation {
+		return strings.ToLower(camelToSnake(c.Type.Name)), true, false
 	}
 
 	switch c.Type.Name {
 	case "string":
-		return fmt.Sprintf("VARCHAR(%v)", c.Type.CharLength), false
+		return fmt.Sprintf("VARCHAR(%v)", c.Type.CharLength), false, false
 	case "text":
-		return "TEXT", false
+		return "TEXT", false, false
 	case "int":
-		return "INTEGER", false
+		return "INTEGER", false, false
 	case "bool":
-		return "BOOLEAN", false
+		return "BOOLEAN", false, false
 	case "dateTime":
-		return "TIMESTAMP", false
+		return "TIMESTAMP", false, false
 	case "uuid":
-		return "UUID", false
+		return "UUID", false, false
 	case "uint":
-		return "UINT", false
+		return "UINT", false, false
 	default:
-		return "UNKNOWN", false
+		return strings.ToUpper(c.Type.Name), false, false
 	}
-}
-
-func isRel(s string) bool {
-	return unicode.IsUpper(rune(s[0]))
 }

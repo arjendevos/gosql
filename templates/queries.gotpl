@@ -8,6 +8,8 @@ import (
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
 
+{{ $AuthFields := .AuthFields }}
+
 {{ range $controller := .Controllers }}
 	type {{ .CamelName }}ListQuery struct {
 		Page   int    `json:"page"`
@@ -109,4 +111,16 @@ import (
 			qm.Where("id = ?", idInInt),
 		}, nil
 	}
+
+
+	func parse{{ .CamelName }}AuthToMods(context *gin.Context) []qm.QueryMod {
+		var queryMods []qm.QueryMod
+		{{ range $auth := $AuthFields }}
+			queryMods = append(queryMods, qm.Where("{{ .SnakeName }} = ?", context.Value("{{ .SnakeName }}").({{ .GoType }})))
+		{{- end }}
+
+
+		return queryMods
+	}
+
 {{ end }}

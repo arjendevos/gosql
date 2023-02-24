@@ -1,0 +1,12 @@
+package {{ .PackageName }}
+
+import (
+	"github.com/volatiletech/null/v8"
+)
+
+func nullString(s null.String) string {
+	if s.IsZero() {
+		return ""
+	}
+	return s.String
+}

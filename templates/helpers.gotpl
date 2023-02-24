@@ -2,6 +2,14 @@
 package {{ .PackageName }}
 
 import (
+	{{ if .HasAuth }}
+	"os"
+	"time"
+	"errors"
+
+	"github.com/dgrijalva/jwt-go"
+	{{- end }}
+
 	"github.com/gin-gonic/gin"
 	"gopkg.in/validator.v2"
 )
@@ -32,3 +40,54 @@ func bindAndValidateJSON(context *gin.Context, obj interface{}) error {
 
 	return nil
 }
+
+{{ if .HasAuth}}
+type JWTPayload struct {
+    {{ range $jwt := .JWTFields }}
+        {{ .CamelName }} {{ .GoType }} `json:"{{ .SnakeName }}"`
+    {{- end }}
+}
+
+type JWTClaim struct {
+    *JWTPayload
+	jwt.StandardClaims
+}
+
+func GenerateJWT(jwtPayload *JWTPayload) (signedToken string, err error) {
+	secretKey := []byte(os.Getenv("JWT_SECRET"))
+
+	expirationTime := time.Now().Add(24 * 7 * time.Hour)
+	claims := &JWTClaim{
+		JWTPayload: jwtPayload,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: expirationTime.Unix(),
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(secretKey)
+}
+
+func ValidateToken(signedToken string) (*JWTClaim, error) {
+	secretKey := []byte(os.Getenv("JWT_SECRET"))
+	token, err := jwt.ParseWithClaims(
+		signedToken,
+		&JWTClaim{},
+		func(token *jwt.Token) (interface{}, error) {
+			return secretKey, nil
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	claims, ok := token.Claims.(*JWTClaim)
+	if !ok {
+		return nil, errors.New("couldn't parse claims")
+	}
+	if claims.ExpiresAt < time.Now().Local().Unix() {
+		return nil, errors.New("token expired")
+	}
+
+	return claims, nil
+}
+{{- end}}
+

@@ -36,26 +36,29 @@ func parseGoSQLFile(fileName string) (string, []*Model) {
 	sqlTypeMatch := sqlTypeCompiled.FindString(str)
 	sqlType = sqlTypeMatch[1:]
 
-	re := regexp.MustCompile(modelRegexp)
-	match := re.FindAllString(str, -1)
+	re := regexp.MustCompile(modelRegexp2)
+	match := re.FindAllStringSubmatch(str, -1)
+
+	var hasAuth bool
+	var authModel *Model
 
 	for _, m := range match {
-		re := regexp.MustCompile(modelSplitRegexp)
-		match := re.FindStringSubmatch(m)
+		atStrings := m[3:]
+		// re := regexp.MustCompile(modelSplitRegexp)
+		// match := re.FindStringSubmatch(model)
 
 		if len(match) <= 1 {
 			panic("Invalid model definition")
 		}
 
-		name := camelToSnake(match[1])
-		body := strings.TrimSpace(match[2])
+		name := camelToSnake(m[1])
+		body := strings.TrimSpace(m[2])
 
 		var columns []*Column
 
 		bodyArray := strings.Split(body, "\n")
 
 		for _, line := range bodyArray {
-
 			splittedLine := strings.Split(strings.TrimSpace(line), " ")
 			if len(splittedLine) <= 1 {
 				panic("Invalid column definition")
@@ -121,15 +124,94 @@ func parseGoSQLFile(fileName string) (string, []*Model) {
 				Type:       t,
 				Attributes: attributes,
 				IsRelation: isRelation(t.Name),
+				Expose:     shouldExpose(attributes),
 			})
 		}
 
-		models = append(models, &Model{
-			SnakeName: name,
-			CamelName: snakeToCamel(name),
-			Columns:   columns,
-		})
+		isAuthRequired := true
+		var isAuthUser, isAuthOrg, isAuthOrgLink bool
 
+		for _, a := range atStrings {
+			if strings.Contains(a, "authUser") {
+				isAuthUser = true
+
+			}
+
+			if strings.Contains(a, "authOrg") {
+				isAuthOrg = true
+			}
+
+			if strings.Contains(a, "authOrgLink") {
+				isAuthOrgLink = true
+			}
+
+			if strings.Contains(a, "noAuth") {
+				isAuthRequired = false
+			}
+		}
+
+		m := &Model{
+			SnakeName:      name,
+			CamelName:      snakeToCamel(name),
+			Columns:        columns,
+			IsAuthRequired: isAuthRequired,
+			IsAuthUser:     isAuthUser,
+			IsAuthOrg:      isAuthOrg,
+			IsAuthOrgLink:  isAuthOrgLink,
+		}
+
+		models = append(models, m)
+
+		if m.IsAuthUser {
+			hasAuth = true
+			authModel = m
+		}
+	}
+
+	if hasAuth {
+		for _, m := range models {
+			if m.IsAuthUser {
+				continue
+			}
+
+			// var idType *Type
+			// for _, c := range m.Columns {
+			// 	if c.SnakeName == "id" {
+			// 		idType = c.Type
+			// 	}
+			// }
+
+			var hasAuthUser bool
+			for _, c := range m.Columns {
+				if c.IsRelation && strings.EqualFold(c.Type.Name, authModel.CamelName) {
+					hasAuthUser = true
+				}
+			}
+
+			if hasAuthUser {
+				continue
+			}
+
+			m.Columns = append(m.Columns, &Column{
+				SnakeName: camelToSnake(authModel.CamelName),
+				CamelName: snakeToCamel(authModel.SnakeName),
+				Type: &Type{
+					Name:                   firstToLower(authModel.CamelName),
+					GoTypeName:             authModel.CamelName,
+					IsNullable:             false,
+					HasDifferentCharLength: false,
+					CharLength:             255,
+				},
+				Attributes: []*Attribute{
+					{
+						Name:     "index",
+						Value:    "",
+						HasValue: false,
+					},
+				},
+				IsRelation: true,
+			})
+		}
 	}
 
 	// for _, m := range models {
@@ -207,10 +289,20 @@ func getGotype(t string) string {
 	case "uint":
 		return "uint"
 	default:
-		return "unknown type"
+		return t
 	}
 }
 
 func isRelation(s string) bool {
 	return unicode.IsUpper(rune(s[0]))
+}
+
+func shouldExpose(at []*Attribute) bool {
+	for _, a := range at {
+		if a.Name == "hide" {
+			return false
+		}
+	}
+
+	return true
 }

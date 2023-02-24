@@ -4,6 +4,7 @@ package {{ .PackageName}}
 import (
     "database/sql"
     "os"
+    "fmt"
     "time"
 
 	"github.com/gin-gonic/gin"
@@ -24,15 +25,20 @@ func RunApi(db *sql.DB, c *ApiConfig) {
 
     router := gin.Default()
 	router.Use(cors.New(cors.Config{
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowMethods:     []string{"GET", "POST", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization", "Access-Control-Allow-Credentials", "cookie"},
 		AllowOrigins:     c.AllowOrigins,
 		MaxAge:           12 * time.Hour,
 		AllowCredentials: true,
 	}))
 
+    router.POST("/auth/signin", controllers.Auth.SignIn)
+    router.POST("/auth/signup", controllers.Auth.SignUp)
+    router.POST("/auth/signout", controllers.Auth.SignOut)
+    router.Use(AuthMiddleware()).POST("/me", controllers.Auth.Me)
+
 {{ range $controller := .Controllers }}
-    {{ firstToLower .CamelName }} := router.Group("/{{ .SnakeName }}")
+    {{ firstToLower .CamelName }} := router.Group("/{{ .SnakeName }}"){{ if .IsAuthRequired }}.Use(AuthMiddleware()){{- end}}
     {{ firstToLower .CamelName }}.GET("", controllers.{{ .CamelName}}.List)
     {{ firstToLower .CamelName }}.GET(":id", controllers.{{ .CamelName}}.ByID)
     {{ firstToLower .CamelName }}.POST("", controllers.{{ .CamelName}}.Create)
@@ -40,5 +46,9 @@ func RunApi(db *sql.DB, c *ApiConfig) {
     {{ firstToLower .CamelName }}.DELETE(":id", controllers.{{ .CamelName}}.Delete)
 {{ end }}
 
-    panic(router.Run())
+    port := os.Getenv("PORT")   
+	if port == "" {
+		port = "8080"
+	}
+    panic(router.Run(fmt.Sprintf("localhost:%s", port)))
 }

@@ -7,7 +7,9 @@ import (
 )
 
 type {{ .CamelName }} struct {
-    *dm.{{ .CamelName }}
+    {{- range $column := .Columns }}
+        {{ .CamelName }} {{ .Type.GoTypeName }} `boil:"{{ .SnakeName }}" json:"{{ if .Expose }}{{ .SnakeName }}{{- else}}-{{- end}}" toml:"{{ .SnakeName }}" yaml:"{{  .SnakeName }}"`
+    {{- end }}
 
 {{ range $relation := .Relations }}
     {{ .Name }} {{ .Type }} `boil:"{{ toSnake .Name }}" json:"{{ toSnake .Name }}" toml:"{{ toSnake .Name }}" yaml:"{{ toSnake .Name }}"`
@@ -26,11 +28,17 @@ func SqlBoiler{{ pluralize .CamelName }}ToApi{{ pluralize .CamelName }}(a dm.{{ 
 
 func SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}(a *dm.{{ .CamelName }}) *{{ .CamelName }} {
     p := {{ .CamelName }}{
-        {{ .CamelName }}: a,
+        {{- range $column := .Columns }}
+        {{- if isNullableDBType .}}
+            {{ .CamelName }}: null{{ firstToUpper .Type.GoTypeName }}(a.{{ .CamelName }}),
+        {{- else }}
+            {{ .CamelName }}: a.{{ .CamelName }},
+        {{- end}}
+        {{- end}}
     }
 
    if a.R != nil {
-        {{ range $relation := .Relations }}
+        {{- range $relation := .Relations }}
             if a.R.{{ .Name }} != nil {
                 p.{{ .Name }} = a.R.{{ .Name }}
             }
@@ -39,3 +47,4 @@ func SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}(a *dm.{{ .CamelName }}) *{{ 
 
     return &p
 }
+

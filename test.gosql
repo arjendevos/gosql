@@ -58,7 +58,7 @@ InstagramAccount {
     job Job? @index
     createdAt dateTime @default(now)
     updatedAt dateTime @default(now)
-}
+} @noAuth
  
 ScrapedInstagramAccount {
     id int @unique @default(autoincrement) @index
@@ -85,7 +85,7 @@ ScrapedInstagramAccount {
     account Account @index
     createdAt dateTime @default(now)
     updatedAt dateTime @default(now)
-}
+} @authUser
 
 ScrapedInstagramAccountChained {
     id int @unique @default(autoincrement) @index

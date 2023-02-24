@@ -4,15 +4,20 @@ const (
 	// body = `(?m)^\s{4}.*$`
 	atSignRegexp              = `@([a-zA-Z]+)`
 	modelRegexp               = `(?:^|\n)\s*([A-Z][a-zA-Z]*)\s*{((?:.|\n)*?)}`
+	modelRegexp2              = `(?:^|\n)\s*([A-Z][a-zA-Z]*)\s*{((?:.|\n)*?)}(?:\s*@(\w+))*`
 	modelSplitRegexp          = `^\s*([A-Z][a-zA-Z]*)\s*{((?:.|\n)*?)}`
 	attributeWithValueRegexp  = `^@([a-zA-Z]+)\(([^)]+)\)`
 	attributeWithValueRegexp2 = `^@([a-zA-Z]+)\(([\s\S]+)\)`
 )
 
 type Model struct {
-	SnakeName string
-	CamelName string
-	Columns   []*Column
+	SnakeName      string
+	CamelName      string
+	Columns        []*Column
+	IsAuthRequired bool
+	IsAuthUser     bool
+	IsAuthOrg      bool
+	IsAuthOrgLink  bool
 }
 
 type ModelWithRelations struct {
@@ -26,6 +31,7 @@ type Column struct {
 	Type       *Type
 	Attributes []*Attribute
 	IsRelation bool
+	Expose     bool
 }
 
 type Type struct {
@@ -34,6 +40,7 @@ type Type struct {
 	IsNullable             bool
 	HasDifferentCharLength bool
 	CharLength             int
+	EmptyValue             string
 }
 
 type Attribute struct {
@@ -46,9 +53,28 @@ type TemplateData struct {
 	PackageName string
 }
 
+type HelpersTemplateData struct {
+	PackageName string
+	JWTFields   []*JWTField
+	HasAuth     bool
+}
+
+type JWTField struct {
+	NormalName string
+	CamelName  string
+	SnakeName  string
+	GoType     string
+}
+
 type GeneralTemplateData struct {
 	PackageName string
 	Controllers []*Model
+}
+
+type QueryTemplateData struct {
+	PackageName string
+	Controllers []*Model
+	AuthFields  []*JWTField
 }
 
 type CreateAndUpdateDataModel struct {
@@ -77,6 +103,14 @@ type ControllerTemplateData struct {
 	UpdateColumns []*Column
 }
 
+type AuthTemplateData struct {
+	PackageName   string
+	CamelName     string
+	Imports       []string
+	CreateColumns []*Column
+	JWTFields     []*JWTField
+}
+
 type ModelTemplateRelation struct {
 	Name         string
 	SingularName string
@@ -90,4 +124,5 @@ type ModelTemplateData struct {
 	Imports     []string
 	CamelName   string
 	Relations   []*ModelTemplateRelation
+	Columns     []*Column
 }

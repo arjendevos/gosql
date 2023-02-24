@@ -4,28 +4,30 @@ Current implementation is only done for postgresql, though other sql databases l
 
 ## Model types
 
+| Type                    | PSQL Generator | API Generator |
+| ----------------------- | -------------- | ------------- |
+| `string`, `string(255)` | [x]            | [x]           |
+| `bool`                  | [x]            | [x]           |
+| `text`                  | [x]            | [x]           |
+| `dateTime`              | [x]            | [x]           |
+| `int`                   | [x]            | [x]           |
+| `any`                   | [x]            | [ ]           |
+
 ### IDs
 
 - [x] id uuid @unique @default(uuid_generate_v4()) @index
 - [x] id int @unique @default(autoincrement) @index
 
-### Types
-
-- [x] string
-- [x] bool
-- [x] text
-- [x] DateTime
-- [x] int
-
 ### TODO
 
 - [x] Add order by possibility
 - [x] Add rest of the endpoints with bodies etc
-- [ ] Create unique function for in create and unique + externalize it into a predefined slice
 - [ ] Add or & and possibility in filter
 - [ ] Export to typescript types
 - [ ] Generate postgresql database setup files (client & migrations)
 - [ ] Auto install deps
+- [ ] Add authorization on User & Organization
+- [ ] User authentication
 - [ ] Add select columns (normal not on relations) // Not possible for now due to the sqlboiler implementation
 
 ### REST api -> query possibilities:
@@ -50,3 +52,4 @@ Current implementation is only done for postgresql, though other sql databases l
 5. go get github.com/gin-contrib/cors
 6. go get github.com/lib/pq
 7. go get github.com/joho/godotenv
+8. go get github.com/dgrijalva/jwt-go
