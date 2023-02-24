@@ -88,6 +88,7 @@ You can create a relation by adding a column name it whatever you want, like: `a
 
 - [x] Add order by possibility
 - [x] Add rest of the endpoints with bodies etc
+- [ ] Test whole thing
 - [ ] Add or & and possibility in filter
 - [ ] Export to typescript types
 - [ ] Generate postgresql database setup files (client & migrations)
