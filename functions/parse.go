@@ -135,6 +135,29 @@ func parseGoSQLFile(fileName string) (string, []*Model) {
 			if strings.Contains(a, "authUser") {
 				isAuthUser = true
 
+				var isValidEmailColumn bool
+				var isValidPasswordColumn bool
+				for _, c := range columns {
+					if c.SnakeName == "email" && c.Type.Name == "string" {
+						for _, a := range c.Attributes {
+							if a.Name == "unique" {
+								isValidEmailColumn = true
+							}
+						}
+					}
+
+					if c.SnakeName == "password" && c.Type.Name == "string" {
+						isValidPasswordColumn = true
+					}
+				}
+
+				if !isValidEmailColumn {
+					panic("Auth user model must have a unique email column")
+				}
+
+				if !isValidPasswordColumn {
+					panic("Auth user model must have a password column")
+				}
 			}
 
 			if strings.Contains(a, "authOrg") {
