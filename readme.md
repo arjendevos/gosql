@@ -4,14 +4,14 @@ Current implementation is only done for postgresql, though other sql databases l
 
 ## Model types
 
-| Type                    | PSQL Generator    | API Generator       |
-| ----------------------- | ----------------- | ------------------- |
-| `string`, `string(255)` | :white_check_mark | :white_check_mark   |
-| `bool`                  | :white_check_mark | :white_check_mark   |
-| `text`                  | :white_check_mark | :white_check_mark   |
-| `dateTime`              | :white_check_mark | :white_check_mark   |
-| `int`                   | :white_check_mark | :white_check_mark   |
-| `any`                   | :white_check_mark | :white_large_square |
+| Type                    | PSQL Generator     | API Generator        |
+| ----------------------- | ------------------ | -------------------- |
+| `string`, `string(255)` | :white_check_mark: | :white_check_mark:   |
+| `bool`                  | :white_check_mark: | :white_check_mark:   |
+| `text`                  | :white_check_mark: | :white_check_mark:   |
+| `dateTime`              | :white_check_mark: | :white_check_mark:   |
+| `int`                   | :white_check_mark: | :white_check_mark:   |
+| `any`                   | :white_check_mark: | :white_large_square: |
 
 ### IDs
 
