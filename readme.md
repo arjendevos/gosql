@@ -26,7 +26,7 @@ User {
 Add `authUser` after your model to make it the main table for your user authentication. It will automatically add their relation to all tables. These columns are required:
 
 - `email string @unique`
-- `password` string
+- `password string`
 
 You can exclude any table from the authentication by adding `@noAuth` after the table name.
 
@@ -64,24 +64,7 @@ You can create a relation by adding a column name it whatever you want, like: `a
 - Add `?` to make it nullable.
 - Add `@unique` to make it a one to one relation.
 
-### IDs
-
-- [x] id uuid @unique @default(uuid_generate_v4()) @index
-- [x] id int @unique @default(autoincrement) @index
-
-### TODO
-
-- [x] Add order by possibility
-- [x] Add rest of the endpoints with bodies etc
-- [ ] Add or & and possibility in filter
-- [ ] Export to typescript types
-- [ ] Generate postgresql database setup files (client & migrations)
-- [ ] Auto install deps
-- [ ] Add authorization on User & Organization
-- [ ] User authentication
-- [ ] Add select columns (normal not on relations) // Not possible for now due to the sqlboiler implementation
-
-### REST api -> query possibilities:
+### Query parameters
 
 - [x] limit=3
 - [x] page=4
@@ -93,6 +76,25 @@ You can create a relation by adding a column name it whatever you want, like: `a
 - [ ] filter={"column":{"equals":true, "or": {"lessThan": 4, "and": {"isNotIn": ["d"]}}}}
 - [ ] rels={"relationTable":{"\_limit":4, "\_page":1}} // limit relation array -> only for nToMany relations
 - [ ] select={"column":true"}
+
+### IDs
+
+- [x] id uuid @unique @default(uuid_generate_v4()) @index
+- [x] id int @unique @default(autoincrement) @index
+
+## Todo
+
+### Current implementations & future plans:
+
+- [x] Add order by possibility
+- [x] Add rest of the endpoints with bodies etc
+- [ ] Add or & and possibility in filter
+- [ ] Export to typescript types
+- [ ] Generate postgresql database setup files (client & migrations)
+- [ ] Auto install deps
+- [ ] Add authorization on User & Organization
+- [ ] User authentication
+- [ ] Add select columns (normal not on relations) // Not possible for now due to the sqlboiler implementation
 
 ### Steps for setting up an api:
 
