@@ -101,7 +101,7 @@ func (c *AuthController) SignUp(ctx *gin.Context) {
 		}
 	}
 
-	model := {{ firstToLower .CamelName}}CreateBodyToSqlBoiler(body)
+	model := {{ firstToLower .CamelName}}CreateBodyToSqlBoiler(ctx, body)
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(body.Password), 14)
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil,"generic", "Something went wrong, try again later", false))

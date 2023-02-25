@@ -38,12 +38,15 @@ func RunApi(db *sql.DB, c *ApiConfig) {
     router.Use(AuthMiddleware()).POST("/me", controllers.Auth.Me)
 
 {{ range $controller := .Controllers }}
-    {{ firstToLower .CamelName }} := router.Group("/{{ .SnakeName }}"){{ if .IsAuthRequired }}.Use(AuthMiddleware()){{- end}}
-    {{ firstToLower .CamelName }}.GET("", controllers.{{ .CamelName}}.List)
-    {{ firstToLower .CamelName }}.GET(":id", controllers.{{ .CamelName}}.ByID)
-    {{ firstToLower .CamelName }}.POST("", controllers.{{ .CamelName}}.Create)
-    {{ firstToLower .CamelName }}.PATCH(":id", controllers.{{ .CamelName}}.Update)
-    {{ firstToLower .CamelName }}.DELETE(":id", controllers.{{ .CamelName}}.Delete)
+    {{ if .IsAuthUser }}
+    {{- else}}
+        {{ firstToLower .CamelName }} := router.Group("/{{ .SnakeName }}"){{ if .IsAuthRequired }}.Use(AuthMiddleware()){{- end}}
+        {{ firstToLower .CamelName }}.GET("", controllers.{{ .CamelName}}.List)
+        {{ firstToLower .CamelName }}.GET(":id", controllers.{{ .CamelName}}.ByID)
+        {{ firstToLower .CamelName }}.POST("", controllers.{{ .CamelName}}.Create)
+        {{ firstToLower .CamelName }}.PATCH(":id", controllers.{{ .CamelName}}.Update)
+        {{ firstToLower .CamelName }}.DELETE(":id", controllers.{{ .CamelName}}.Delete)
+    {{- end}}
 {{ end }}
 
     port := os.Getenv("PORT")   

@@ -82,12 +82,14 @@ type CreateAndUpdateDataModel struct {
 	CamelName     string
 	CreateColumns []*Column
 	UpdateColumns []*Column
+	*Model
 }
 
 type CreateAndUpdateData struct {
 	PackageName string
 	Controllers []*CreateAndUpdateDataModel
 	Imports     []string
+	AuthField   *JWTField
 }
 
 type SelectTemplateData struct {
@@ -96,12 +98,12 @@ type SelectTemplateData struct {
 }
 
 type ControllerTemplateData struct {
-	PackageName    string
-	CamelName      string
-	Imports        []string
-	CreateColumns  []*Column
-	UpdateColumns  []*Column
-	IsAuthRequired bool
+	PackageName   string
+	CamelName     string
+	Imports       []string
+	CreateColumns []*Column
+	UpdateColumns []*Column
+	*Model
 }
 
 type AuthTemplateData struct {

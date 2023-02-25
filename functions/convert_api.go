@@ -155,7 +155,7 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 
 		createColumns, updateColumns, mImports := getCreateAndUpdateColumns(m)
 
-		if err := populateTemplate("templates/controller.gotpl", outputDir+"/generated_"+m.SnakeName+"_controller.go", ControllerTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), CamelName: m.CamelName, Imports: imports, CreateColumns: createColumns, UpdateColumns: updateColumns, IsAuthRequired: m.IsAuthRequired}); err != nil {
+		if err := populateTemplate("templates/controller.gotpl", outputDir+"/generated_"+m.SnakeName+"_controller.go", ControllerTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), CamelName: m.CamelName, Imports: imports, CreateColumns: createColumns, UpdateColumns: updateColumns, Model: m}); err != nil {
 			return err
 		}
 
@@ -165,6 +165,7 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 			CamelName:     m.CamelName,
 			CreateColumns: createColumns,
 			UpdateColumns: updateColumns,
+			Model:         m,
 		})
 
 		for _, c := range m.Columns {
@@ -237,7 +238,7 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 	if hasNullableFields {
 		bodieImports = addImport(bodieImports, "github.com/volatiletech/null/v8")
 	}
-	if err := populateTemplate("templates/bodies.gotpl", outputDir+"/generated_bodies.go", CreateAndUpdateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: createAndUpdateData, Imports: bodieImports}); err != nil {
+	if err := populateTemplate("templates/bodies.gotpl", outputDir+"/generated_bodies.go", CreateAndUpdateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: createAndUpdateData, Imports: bodieImports, AuthField: getIdentifierFromAuthFields(authQueryFields)}); err != nil {
 		return err
 	}
 
@@ -345,6 +346,16 @@ func populateTemplate(file, output string, data interface{}) error {
 	return nil
 }
 
+func getIdentifierFromAuthFields(authFields []*JWTField) *JWTField {
+	for _, f := range authFields {
+		if strings.EqualFold(f.NormalName, "id") {
+			return f
+		}
+	}
+
+	return nil
+}
+
 type TemplateConfig struct {
 	Template string
 	Data     interface{}
@@ -360,6 +371,13 @@ func parseTemplate(c *TemplateConfig) (string, error) {
 		"isFalse": func(a bool) bool {
 			return !a
 		},
+		"isNotNil": func(a *JWTField) bool {
+			return a != nil
+		},
+		"neq": func(a string, b string) bool {
+			return !strings.EqualFold(a, b)
+		},
+		"eq": strings.EqualFold,
 		"getValidate": func(c *Column) string {
 			var v []string
 			var canBeEmpty bool

@@ -113,10 +113,14 @@ import (
 	}
 
 
-	func parse{{ .CamelName }}AuthToMods(context *gin.Context) []qm.QueryMod {
+	func parse{{ .CamelName }}AuthToMods(context *gin.Context, isAuthUser bool) []qm.QueryMod {
 		var queryMods []qm.QueryMod
 		{{ range $auth := $AuthFields }}
-			queryMods = append(queryMods, qm.Where("{{ .SnakeName }} = ?", context.Value("{{ .SnakeName }}").({{ .GoType }})))
+			if isAuthUser {
+				queryMods = append(queryMods, qm.Where("{{ toLower .NormalName }} = ?", context.Value("{{ .SnakeName }}").({{ .GoType }})))
+			} else {
+				queryMods = append(queryMods, qm.Where("{{ .SnakeName }} = ?", context.Value("{{ .SnakeName }}").({{ .GoType }})))
+			}
 		{{- end }}
 
 
