@@ -96,11 +96,12 @@ type SelectTemplateData struct {
 }
 
 type ControllerTemplateData struct {
-	PackageName   string
-	CamelName     string
-	Imports       []string
-	CreateColumns []*Column
-	UpdateColumns []*Column
+	PackageName    string
+	CamelName      string
+	Imports        []string
+	CreateColumns  []*Column
+	UpdateColumns  []*Column
+	IsAuthRequired bool
 }
 
 type AuthTemplateData struct {

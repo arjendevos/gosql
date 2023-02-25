@@ -136,6 +136,7 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 	var createAndUpdateData []*CreateAndUpdateDataModel
 	var jwtFields []*JWTField
 	var authQueryFields []*JWTField
+	var hasNullableFields bool
 	var hasAuthUser bool
 	// var hasAuthOrg bool
 	// var hasAuthOrgLink bool
@@ -154,7 +155,7 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 
 		createColumns, updateColumns, mImports := getCreateAndUpdateColumns(m)
 
-		if err := populateTemplate("templates/controller.gotpl", outputDir+"/generated_"+m.SnakeName+"_controller.go", ControllerTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), CamelName: m.CamelName, Imports: imports, CreateColumns: createColumns, UpdateColumns: updateColumns}); err != nil {
+		if err := populateTemplate("templates/controller.gotpl", outputDir+"/generated_"+m.SnakeName+"_controller.go", ControllerTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), CamelName: m.CamelName, Imports: imports, CreateColumns: createColumns, UpdateColumns: updateColumns, IsAuthRequired: m.IsAuthRequired}); err != nil {
 			return err
 		}
 
@@ -165,6 +166,12 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 			CreateColumns: createColumns,
 			UpdateColumns: updateColumns,
 		})
+
+		for _, c := range m.Columns {
+			if c.Type.IsNullable {
+				hasNullableFields = true
+			}
+		}
 
 		if m.IsAuthUser {
 			hasAuthUser = true
@@ -227,7 +234,9 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 	}
 
 	bodieImports := modelImports
-	bodieImports = addImport(bodieImports, "github.com/volatiletech/null/v8")
+	if hasNullableFields {
+		bodieImports = addImport(bodieImports, "github.com/volatiletech/null/v8")
+	}
 	if err := populateTemplate("templates/bodies.gotpl", outputDir+"/generated_bodies.go", CreateAndUpdateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: createAndUpdateData, Imports: bodieImports}); err != nil {
 		return err
 	}

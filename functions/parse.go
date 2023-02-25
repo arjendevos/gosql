@@ -215,25 +215,25 @@ func parseGoSQLFile(fileName string) (string, []*Model) {
 				continue
 			}
 
-			m.Columns = append(m.Columns, &Column{
-				SnakeName: camelToSnake(authModel.CamelName),
-				CamelName: snakeToCamel(authModel.SnakeName),
-				Type: &Type{
-					Name:                   firstToLower(authModel.CamelName),
-					GoTypeName:             authModel.CamelName,
-					IsNullable:             false,
-					HasDifferentCharLength: false,
-					CharLength:             255,
-				},
-				Attributes: []*Attribute{
-					{
-						Name:     "index",
-						Value:    "",
-						HasValue: false,
-					},
-				},
-				IsRelation: true,
-			})
+			// m.Columns = append(m.Columns, &Column{
+			// 	SnakeName: camelToSnake(authModel.CamelName),
+			// 	CamelName: snakeToCamel(authModel.SnakeName),
+			// 	Type: &Type{
+			// 		Name:                   firstToLower(authModel.CamelName),
+			// 		GoTypeName:             authModel.CamelName,
+			// 		IsNullable:             false,
+			// 		HasDifferentCharLength: false,
+			// 		CharLength:             255,
+			// 	},
+			// 	Attributes: []*Attribute{
+			// 		{
+			// 			Name:     "index",
+			// 			Value:    "",
+			// 			HasValue: false,
+			// 		},
+			// 	},
+			// 	IsRelation: true,
+			// })
 		}
 	}
 
