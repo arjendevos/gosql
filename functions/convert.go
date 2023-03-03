@@ -8,11 +8,10 @@ import (
 )
 
 type GoSQLConfig struct {
-	SchemeDir            string
-	MigrationDir         string
-	ModelOutputDir       string
-	ControllerOutputDir  string
-	CustomControllersDir string
+	SchemeDir           string
+	MigrationDir        string
+	ModelOutputDir      string
+	ControllerOutputDir string
 }
 
 func Convert(c *GoSQLConfig) {
