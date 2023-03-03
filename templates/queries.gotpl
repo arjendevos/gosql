@@ -8,14 +8,50 @@ import (
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
 
-{{ $AuthFields := .AuthFields }}
+{{ $authFields := .AuthFields }}
+{{ $hasMultipleAuthFields := .HasMultipleAuthFields }}
 
 {{ range $controller := .Controllers }}
+	type {{ .CamelName }}Query struct {
+		Relations *{{ .CamelName }}Relations `json:"relations"`
+	}
+
+	func parse{{ .CamelName }}Query(context *gin.Context) (*{{ .CamelName }}Query, error) {
+		relations := context.DefaultQuery("rels", "{}")
+
+		r, err := parse{{ .CamelName }}Relations(relations)
+		if err != nil {
+			return nil, err
+		}
+
+		return &{{ .CamelName }}Query{
+			Relations: r,
+		}, nil
+	}
+
+	func parse{{ .CamelName }}QueryToMods(context *gin.Context) ([]qm.QueryMod, error) {
+		query, err := parse{{ .CamelName }}Query(context)
+		if err != nil {
+			return nil, err
+		}
+
+		var queryMods []qm.QueryMod
+
+		if query.Relations != nil {
+			relationQueryMods, err := parse{{ .CamelName }}RelationsToMods(query.Relations, "")
+			if err != nil {
+				return nil, err
+			}
+			queryMods = append(queryMods, relationQueryMods...)
+		}
+
+		return queryMods, nil
+	}
+
 	type {{ .CamelName }}ListQuery struct {
 		Page   int    `json:"page"`
 		Limit  int    `json:"limit"`
 		Filter *{{ .CamelName }}Filter `json:"filter"`
-		Relations *{{ .CamelName }}Relations `json:"relations"`
 		Orders *{{ .CamelName }}OrderColumns `json:"orders"`
 	}
 
@@ -23,15 +59,9 @@ import (
 		page := context.DefaultQuery("page", "0")
 		limit := context.DefaultQuery("limit", "10")
 		filter := context.DefaultQuery("filter", "{}")
-		relations := context.DefaultQuery("rels", "{}")
 		orders := context.DefaultQuery("order", "{}")
 
 		f, err := parse{{ .CamelName }}Filter(filter)
-		if err != nil {
-			return nil, err
-		}
-
-		r, err := parse{{ .CamelName }}Relations(relations)
 		if err != nil {
 			return nil, err
 		}
@@ -40,7 +70,6 @@ import (
 		if err != nil {
 			return nil, err
 		}
-
 
 		pageInInt, err := strconv.Atoi(page)
 		if err != nil {
@@ -56,7 +85,6 @@ import (
 			Page:   pageInInt,
 			Limit:  limitInInt,
 			Filter: f,
-			Relations: r,
 			Orders: o,
 		}, nil
 	}
@@ -80,15 +108,6 @@ import (
 			queryMods = append(queryMods, filterQueryMods...)
 		}
 
-		if query.Relations != nil {
-			relationQueryMods, err := parse{{ .CamelName }}RelationsToMods(query.Relations)
-			if err != nil {
-				return nil, err
-			}
-			queryMods = append(queryMods, relationQueryMods...)
-		}
-
-
 		if query.Orders != nil {
 			ordersQueryMods, err := parse{{ .CamelName }}OrdersToMods(query.Orders)
 			if err != nil {
@@ -97,7 +116,12 @@ import (
 			queryMods = append(queryMods, ordersQueryMods...)
 		}
 
-		return queryMods, nil
+		extraMods,err := parse{{ .CamelName }}QueryToMods(context)
+		if err != nil {
+			return nil, err
+		}
+
+		return append(queryMods, extraMods...), nil
 	}
 
 	func parse{{ .CamelName }}ByIDParamToMods(context *gin.Context) ([]qm.QueryMod, error) {
@@ -107,24 +131,79 @@ import (
 			return nil, err
 		}
 
-		return []qm.QueryMod{
-			qm.Where("id = ?", idInInt),
-		}, nil
+		queryMods, err := parse{{ .CamelName }}QueryToMods(context)
+		if err != nil {
+			return nil, err
+		}
+
+		return append(queryMods, []qm.QueryMod{qm.Where("id = ?", idInInt)}...), nil
 	}
 
+	{{ if $hasMultipleAuthFields }} 
+		type {{ .CamelName }}AuthQuery struct {
+			{{ range $auth := $authFields }}
+				{{ .TableCamelName }} bool `json:"{{ .TableSnakeName }}"`
+			{{- end }}
+		}
 
-	func parse{{ .CamelName }}AuthToMods(context *gin.Context, isAuthUser bool) []qm.QueryMod {
-		var queryMods []qm.QueryMod
-		{{ range $auth := $AuthFields }}
-			if isAuthUser {
-				queryMods = append(queryMods, qm.Where("{{ toLower .NormalName }} = ?", context.Value("{{ .SnakeName }}").({{ .GoType }})))
-			} else {
-				queryMods = append(queryMods, qm.Where("{{ .SnakeName }} = ?", context.Value("{{ .SnakeName }}").({{ .GoType }})))
+		func parse{{.CamelName}}AuthQuery(context *gin.Context) (*{{.CamelName}}AuthQuery, error) {
+			from := context.DefaultQuery("from", "all")
+
+			{{ range $auth := $authFields }}
+				from{{ .TableCamelName }} := false
+			{{- end}}
+
+			switch from {
+				{{- range $auth := $authFields }}
+					case "{{ .TableSnakeName }}":
+						from{{ .TableCamelName }} = true
+				{{- end }}
+				default:
+					{{- range $auth := $authFields }}
+						from{{ .TableCamelName }} = true
+					{{- end }}
 			}
-		{{- end }}
+
+			return &{{.CamelName}}AuthQuery{
+				{{- range $auth := $authFields }}
+					{{ .TableCamelName }}: from{{ .TableCamelName }},
+				{{- end }}
+			}, nil
+		}
+	{{- end }}
+
+	func parse{{ .CamelName }}AuthToMods(context *gin.Context) ([]qm.QueryMod, error) {
+		{{- if and ($hasMultipleAuthFields) (not .IsAuthUser) (not .IsAuthOrganization)}}
+			authQuery, err := parse{{ .CamelName }}AuthQuery(context)
+			if err != nil {
+				return nil, err
+			}
+		{{- end}}
+
+		var queryMods []qm.QueryMod
+		{{ $isAuthUser := .IsAuthUser}}
+		{{ $isAuthOrganization := .IsAuthOrganization}}
+
+		{{ $columns := .Columns }}
+		{{ range $auth := $authFields }}
+			{{- if isAuthFieldInModel $columns .}}
+				{{- if and ($hasMultipleAuthFields) (not $isAuthUser) (not $isAuthOrganization)}}
+					if authQuery.{{ .TableCamelName }} {
+						queryMods = append(queryMods, qm.Where("{{ .SnakeName }} = ?", context.Value("{{ .SnakeName }}").({{ .GoType }})))
+					}
+				{{- else }}
+					queryMods = append(queryMods, qm.Where("{{ .SnakeName }} = ?", context.Value("{{ .SnakeName }}").({{ .GoType }})))
+				{{- end}}
+			{{- else }}
+				{{- if or (and $isAuthUser .IsFromUserTable) (and $isAuthOrganization .IsFromOrganizationTable)}}
+					queryMods = append(queryMods, qm.Where("{{ toLower .NormalName }} = ?", context.Value("{{ .SnakeName }}").({{ .GoType }})))
+				{{- end}}
+				
+			{{- end}}
+		{{- end}}
 
 
-		return queryMods
+		return queryMods, nil
 	}
 
 {{ end }}

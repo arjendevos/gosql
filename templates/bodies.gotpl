@@ -8,22 +8,46 @@ import (
     "{{ . }}"
 	{{- end }}
 )
-{{ $authField := .AuthField}}
+{{ $authFields := .AuthFields}}
 
 {{ range $controller := .Controllers }}
+	{{ $isAuthOrganizationUser := .IsAuthOrganizationUser}}
+
+	{{- if $isAuthOrganizationUser}}
+		type {{ .CamelName }}CreateBodyWithoutRelations struct {
+			{{ range $column := .CreateColumns }}
+				{{- if isProtected $controller.ProtectedRoutes "CREATE" }}
+					{{- if (isNotInJwtField .SnakeName $authFields) }}
+						{{ .CamelName }} {{ if isNullableForInput . }}*{{- end}}{{ .Type.GoTypeName }} `json:"{{ .SnakeName }}"{{ getValidate .}}`
+					{{- end}}
+				{{- else}}
+					{{ .CamelName }} {{ if isNullableForInput . }}*{{- end}}{{ .Type.GoTypeName }} `json:"{{ .SnakeName }}"{{ getValidate .}}`
+				{{- end }}
+			{{- end }}
+		}
+	{{- end}}
+	
 	type {{ .CamelName }}CreateBody struct {
 		{{ range $column := .CreateColumns }}
-			{{- if neq .SnakeName $authField.SnakeName}}
+			{{- if isProtected $controller.ProtectedRoutes "CREATE" }}
+				{{- if or (isNotInJwtField .SnakeName $authFields) ($isAuthOrganizationUser) }}
+					{{ .CamelName }} {{ if isNullableForInput . }}*{{- end}}{{ .Type.GoTypeName }} `json:"{{ .SnakeName }}"{{ getValidate .}}`
+				{{- end}}
+			{{- else}}
 				{{ .CamelName }} {{ if isNullableForInput . }}*{{- end}}{{ .Type.GoTypeName }} `json:"{{ .SnakeName }}"{{ getValidate .}}`
-			{{- end}}
+			{{- end }}
 		{{- end }}
 	}
 	
 	type {{ .CamelName }}UpdateBody struct {
 		{{ range $column := .UpdateColumns }}
-			{{- if neq .SnakeName $authField.SnakeName}}
+		{{- if isProtected $controller.ProtectedRoutes "UPDATE" }}
+			{{- if or (isNotInJwtField .SnakeName $authFields) ($isAuthOrganizationUser) }}
 				{{ .CamelName }} *{{ .Type.GoTypeName }} `json:"{{  .SnakeName }}"{{ getValidate .}}`
 			{{- end}}
+		{{- else}}
+			{{ .CamelName }} *{{ .Type.GoTypeName }} `json:"{{  .SnakeName }}"{{ getValidate .}}`
+		{{- end}}
 		{{- end }}
 	}
 
@@ -37,9 +61,11 @@ import (
 	}
 
 	func {{firstToLower .CamelName}}CreateBodyToSqlBoiler(context *gin.Context, body *{{ .CamelName }}CreateBody) *dm.{{ .CamelName }} {
-		{{- if isFalse .IsAuthUser }}
-			{{- if isNotNil $authField }}
-				{{ firstToLower $authField.CamelName }} := context.Value("{{ $authField.SnakeName }}").({{ $authField.GoType}})
+		{{- if isFalse (isAuthTable .)}}
+			{{- if and (hasAuthFields $authFields) (isProtected $controller.ProtectedRoutes "CREATE") }}
+				{{- range $authField := $authFields }}
+					{{ firstToLower $authField.CamelName }} := context.Value("{{ $authField.SnakeName }}").({{ $authField.GoType}})
+				{{- end }}
 			{{- end}}
 		{{- end}}
 
@@ -47,11 +73,15 @@ import (
 			{{- range $column := .CreateColumns }}
 				{{- if isNullableForInput .}}
 				{{- else}}
-					{{- if eq .SnakeName $authField.SnakeName}}
-						{{ .CamelName }}: {{firstToLower $authField.CamelName }},
-					{{- else}}
+					{{- if and (hasAuthFields $authFields) (isProtected $controller.ProtectedRoutes "CREATE") }}
+						{{- if and (isInJwtField .SnakeName $authFields) (isFalse $isAuthOrganizationUser)}}
+							{{ .CamelName }}: {{firstToLower .CamelName }},
+						{{- else}}
+							{{ .CamelName }}: body.{{ .CamelName }},
+						{{- end}}
+					{{- else }}
 						{{ .CamelName }}: body.{{ .CamelName }},
-					{{- end}}
+					{{- end }}
 				{{- end}}
 			{{- end }}
 		}
@@ -60,14 +90,23 @@ import (
 		{{- if isNullableForInput .}}
 			if body.{{ .CamelName }} != nil {
 			{{- if isNullableDBType .}}
-				{{- if eq .SnakeName $authField.SnakeName}}
-					model.{{ .CamelName }} = null.{{ firstToUpper .Type.GoTypeName}}From(*{{ firstToLower $authField.CamelName }})
-				{{- else}}
-					model.{{ .CamelName }} = null.{{ firstToUpper .Type.GoTypeName}}From(*body.{{ .CamelName }})
-				{{- end}}
+				{{- if and (hasAuthFields $authFields) (isProtected $controller.ProtectedRoutes "CREATE") }} // TODO: check if CREATE is correct or UPDATE
+					{{- if and (isInJwtField .SnakeName $authFields) (isFalse $isAuthOrganizationUser)}}
+						model.{{ .CamelName }} = null.{{ firstToUpper .Type.GoTypeName}}From(*{{ firstToLower .CamelName }})
+					{{- else}}
+						model.{{ .CamelName }} = null.{{ firstToUpper .Type.GoTypeName}}From(*body.{{ .CamelName }})
+					{{- end}}
 			{{- else }}
-				{{- if eq .SnakeName $authField.SnakeName}}
-					model.{{ .CamelName }} = *{{ firstToLower $authField.CamelName }}
+				model.{{ .CamelName }} = null.{{ firstToUpper .Type.GoTypeName}}From(*body.{{ .CamelName }})
+			{{- end}}
+				
+			{{- else }}
+				{{- if and (hasAuthFields $authFields) (isProtected $controller.ProtectedRoutes "CREATE") }} // TODO: check if CREATE is correct or UPDATE
+					{{- if and (isInJwtField .SnakeName $authFields) (isFalse $isAuthOrganizationUser)}}
+						model.{{ .CamelName }} = *{{ firstToLower .CamelName }}
+					{{- else}}
+						model.{{ .CamelName }} = *body.{{ .CamelName }}
+					{{- end}}
 				{{- else}}
 					model.{{ .CamelName }} = *body.{{ .CamelName }}
 				{{- end}}
@@ -88,15 +127,27 @@ import (
 	}
 
 	func {{ firstToLower .CamelName}}UpdateBodyToSqlBoiler(context *gin.Context, body *{{ .CamelName }}UpdateBody, oldModel *dm.{{ .CamelName }}) *dm.{{ .CamelName }} {
-		{{- if isFalse .IsAuthUser }}
-			{{- if isNotNil $authField }}
-				{{ firstToLower $authField.CamelName }} := context.Value("{{ $authField.SnakeName }}").({{ $authField.GoType}})
-			{{ end}}
+		{{- if isFalse (isAuthTable .)}}
+			{{- if and (hasAuthFields $authFields) (isProtected $controller.ProtectedRoutes "UPDATE") }}
+				{{- range $authField := $authFields }}
+					{{ firstToLower $authField.CamelName }} := context.Value("{{ $authField.SnakeName }}").({{ $authField.GoType}})
+				{{- end }}
+			{{- end}}
 		{{- end}}
 
 		{{- range $column := .UpdateColumns }}
-			{{- if eq .SnakeName $authField.SnakeName}}
-				oldModel.{{ .CamelName }} = {{firstToLower $authField.CamelName }}
+			{{- if and (hasAuthFields $authFields)  (isProtected $controller.ProtectedRoutes "UPDATE") }} // TODO: check if UPDATE is correct or CREATE
+				{{- if and (isInJwtField .SnakeName $authFields) (isFalse $isAuthOrganizationUser)}}
+					oldModel.{{ .CamelName }} = {{firstToLower .CamelName }}
+				{{- else}}
+					if body.{{ .CamelName }} != nil {
+						{{- if isNullableDBType .}}
+							oldModel.{{ .CamelName }} = null.{{ firstToUpper .Type.GoTypeName}}From(*body.{{ .CamelName }})
+						{{- else }}
+							oldModel.{{ .CamelName }} = *body.{{ .CamelName }}
+						{{- end}}
+					}
+				{{- end}}
 			{{- else}}
 				if body.{{ .CamelName }} != nil {
 					{{- if isNullableDBType .}}

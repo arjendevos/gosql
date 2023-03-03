@@ -56,7 +56,7 @@ func (c *GoSQLConfig) ConvertApiModels(models []*Model) error {
 		fset := token.NewFileSet()
 		f, err := parser.ParseFile(fset, fmt.Sprintf("%s/%s.go", config.Output, m.SnakeName), nil, parser.AllErrors)
 		if err != nil {
-			return fmt.Errorf("make sure you run sqlboiler first")
+			return fmt.Errorf("make sure to migrate and run sqlboiler first")
 		}
 
 		var imports []string
@@ -64,13 +64,24 @@ func (c *GoSQLConfig) ConvertApiModels(models []*Model) error {
 
 		relations := getRelations(f, m, pkgName, models)
 
-		var columnsWithoutRelations []*Column
+		var columnsWithRelationsAsIDs []*Column
 		for _, cl := range m.Columns {
 			if !cl.IsRelation {
-				columnsWithoutRelations = append(columnsWithoutRelations, cl)
+				columnsWithRelationsAsIDs = append(columnsWithRelationsAsIDs, cl)
 				if cl.Type.GoTypeName == "time.Time" {
 					imports = addImport(imports, "time")
 				}
+			}
+
+			if cl.IsRelation {
+				columnsWithRelationsAsIDs = append(columnsWithRelationsAsIDs, &Column{
+					SnakeName:  cl.SnakeName + "_id",
+					CamelName:  cl.CamelName + "ID",
+					Type:       &Type{Name: "int", GoTypeName: "int"},
+					Attributes: []*Attribute{},
+					IsRelation: true,
+					Expose:     true,
+				})
 			}
 		}
 
@@ -79,7 +90,7 @@ func (c *GoSQLConfig) ConvertApiModels(models []*Model) error {
 			CamelName:   m.CamelName,
 			Imports:     imports,
 			Relations:   relations,
-			Columns:     columnsWithoutRelations,
+			Columns:     columnsWithRelationsAsIDs,
 		}); err != nil {
 			return err
 		}
@@ -120,9 +131,7 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 	if err := populateTemplate("templates/filters.gotpl", outputDir+"/generated_filters.go", GeneralTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: models}); err != nil {
 		return err
 	}
-	if err := populateTemplate("templates/client.gotpl", outputDir+"/generated_client.go", GeneralTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: models}); err != nil {
-		return err
-	}
+
 	if err := populateTemplate("templates/columns.gotpl", outputDir+"/generated_columns.go", GeneralTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: models}); err != nil {
 		return err
 	}
@@ -137,9 +146,10 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 	var jwtFields []*JWTField
 	var authQueryFields []*JWTField
 	var hasNullableFields bool
-	var hasAuthUser bool
-	// var hasAuthOrg bool
-	// var hasAuthOrgLink bool
+
+	var authUser *Model
+	var authOrganization *Model
+	var authOrganizationUser *Model
 
 	var modelImports []string
 	modelImports = addImport(modelImports, moduleName+"/"+config.Output)
@@ -175,57 +185,153 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 		}
 
 		if m.IsAuthUser {
-			hasAuthUser = true
+			authUser = m
 
 			for _, c := range m.Columns {
 				for _, a := range c.Attributes {
 					if a.Name == "unique" && !c.IsRelation {
 						jwtFields = append(jwtFields, &JWTField{
-							CamelName:  m.CamelName + c.CamelName,
-							SnakeName:  m.SnakeName + "_" + c.SnakeName,
-							GoType:     c.Type.GoTypeName,
-							NormalName: c.CamelName,
+							CamelName:                   m.CamelName + c.CamelName,
+							SnakeName:                   m.SnakeName + "_" + c.SnakeName,
+							GoType:                      c.Type.GoTypeName,
+							NormalName:                  c.CamelName,
+							TableCamelName:              m.CamelName,
+							TableSnakeName:              m.SnakeName,
+							IsFromUserTable:             true,
+							IsFromOrganizationTable:     false,
+							IsFromOrganizationUserTable: false,
 						})
 					}
 				}
 
 				if c.SnakeName == "id" {
 					authQueryFields = append(authQueryFields, &JWTField{
-						CamelName:  m.CamelName + c.CamelName,
-						SnakeName:  m.SnakeName + "_" + c.SnakeName,
-						GoType:     c.Type.GoTypeName,
-						NormalName: c.CamelName,
+						CamelName:                   m.CamelName + c.CamelName,
+						SnakeName:                   m.SnakeName + "_" + c.SnakeName,
+						GoType:                      c.Type.GoTypeName,
+						NormalName:                  c.CamelName,
+						TableCamelName:              m.CamelName,
+						TableSnakeName:              m.SnakeName,
+						IsFromUserTable:             true,
+						IsFromOrganizationTable:     false,
+						IsFromOrganizationUserTable: false,
 					})
+				}
+			}
+		}
+
+		if m.IsAuthOrganization {
+			authOrganization = m
+
+			for _, c := range m.Columns {
+				for _, a := range c.Attributes {
+					if a.Name == "unique" && !c.IsRelation {
+						jwtFields = append(jwtFields, &JWTField{
+							CamelName:                   m.CamelName + c.CamelName,
+							SnakeName:                   m.SnakeName + "_" + c.SnakeName,
+							GoType:                      c.Type.GoTypeName,
+							NormalName:                  c.CamelName,
+							TableCamelName:              m.CamelName,
+							TableSnakeName:              m.SnakeName,
+							IsFromUserTable:             false,
+							IsFromOrganizationTable:     true,
+							IsFromOrganizationUserTable: false,
+						})
+					}
+				}
+
+				if c.SnakeName == "id" {
+					authQueryFields = append(authQueryFields, &JWTField{
+						CamelName:                   m.CamelName + c.CamelName,
+						SnakeName:                   m.SnakeName + "_" + c.SnakeName,
+						GoType:                      c.Type.GoTypeName,
+						NormalName:                  c.CamelName,
+						TableCamelName:              m.CamelName,
+						TableSnakeName:              m.SnakeName,
+						IsFromUserTable:             false,
+						IsFromOrganizationTable:     true,
+						IsFromOrganizationUserTable: false,
+					})
+				}
+			}
+		}
+
+		if m.IsAuthOrganizationUser {
+			authOrganizationUser = m
+
+			for _, c := range m.Columns {
+				if c.SnakeName == "role" {
+					field := &JWTField{
+						CamelName:                   "Role",
+						SnakeName:                   "role",
+						GoType:                      c.Type.GoTypeName,
+						NormalName:                  "Role",
+						IsFromUserTable:             false,
+						IsFromOrganizationTable:     false,
+						IsFromOrganizationUserTable: true,
+					}
+					jwtFields = append(jwtFields, field)
 				}
 			}
 		}
 	}
 
-	for _, m := range models {
-		if m.IsAuthUser {
-			createColumns, _, mImports := getCreateAndUpdateColumns(m)
-			modelImports = append(modelImports, mImports...)
+	createColumns, _, mImports := getCreateAndUpdateColumns(authUser)
+	var createColumnsOrganization []*Column
+	var createColumnsOrganizationUser []*Column
+	var OrganizationCamelName string
+	var OrganizationUserCamelName string
 
-			if err := populateTemplate("templates/auth_controller.gotpl", outputDir+"/generated_auth_controller.go", AuthTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), CamelName: m.CamelName, Imports: imports, CreateColumns: createColumns, JWTFields: jwtFields}); err != nil {
-				return err
-			}
-		}
+	if authOrganization != nil && authOrganizationUser != nil {
+		OrganizationCamelName = authOrganization.CamelName
+		OrganizationUserCamelName = authOrganizationUser.CamelName
+
+		createColumnsOrganizationModels, _, mImportsOrganization := getCreateAndUpdateColumns(authOrganization)
+		createColumnsOrganizationUserModels, _, mImportsOrganizationUser := getCreateAndUpdateColumns(authOrganizationUser)
+
+		createColumnsOrganization = createColumnsOrganizationModels
+		createColumnsOrganizationUser = createColumnsOrganizationUserModels
+
+		modelImports = append(modelImports, mImportsOrganization...)
+		modelImports = append(modelImports, mImportsOrganizationUser...)
 	}
 
-	if err := populateTemplate("templates/queries.gotpl", outputDir+"/generated_queries.go", QueryTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: models, AuthFields: authQueryFields}); err != nil {
+	modelImports = append(modelImports, mImports...)
+
+	if err := populateTemplate("templates/auth_controller.gotpl", outputDir+"/generated_auth_controller.go", AuthTemplateData{
+		PackageName:                   strings.ReplaceAll(c.ControllerOutputDir, "/", "_"),
+		CamelName:                     authUser.CamelName,
+		Imports:                       imports,
+		CreateColumns:                 createColumns,
+		JWTFields:                     jwtFields,
+		HasOrganization:               authOrganization != nil,
+		HasOrganizationUser:           authOrganizationUser != nil,
+		OrganizationCamelName:         OrganizationCamelName,
+		OrganizationUserCamelName:     OrganizationUserCamelName,
+		OrganizationCreateColumns:     createColumnsOrganization,
+		OrganizationUserCreateColumns: createColumnsOrganizationUser,
+	}); err != nil {
 		return err
 	}
 
-	if err := populateTemplate("templates/routes.gotpl", outputDir+"/generated_routes.go", GeneralTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: models}); err != nil {
+	if err := populateTemplate("templates/queries.gotpl", outputDir+"/generated_queries.go", QueryTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: models, AuthFields: authQueryFields, HasMultipleAuthFields: len(authQueryFields) > 1}); err != nil {
 		return err
 	}
 
-	if err := populateTemplate("./templates/helpers.gotpl", outputDir+"/generated_helpers.go", HelpersTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), JWTFields: jwtFields, HasAuth: hasAuthUser}); err != nil {
+	if err := populateTemplate("templates/client.gotpl", outputDir+"/generated_client.go", QueryTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: models, AuthFields: authQueryFields}); err != nil {
 		return err
 	}
 
-	if hasAuthUser {
-		if err := populateTemplate("./templates/middleware.gotpl", outputDir+"/generated_middleware.go", HelpersTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), JWTFields: jwtFields, HasAuth: hasAuthUser}); err != nil {
+	if err := populateTemplate("templates/routes.gotpl", outputDir+"/generated_routes.go", QueryTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: models, AuthFields: authQueryFields}); err != nil {
+		return err
+	}
+
+	if err := populateTemplate("./templates/helpers.gotpl", outputDir+"/generated_helpers.go", HelpersTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), JWTFields: jwtFields, HasAuth: authUser != nil}); err != nil {
+		return err
+	}
+
+	if authUser != nil {
+		if err := populateTemplate("./templates/middleware.gotpl", outputDir+"/generated_middleware.go", HelpersTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), JWTFields: jwtFields, HasAuth: authUser != nil}); err != nil {
 			return err
 		}
 	}
@@ -238,7 +344,7 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 	if hasNullableFields {
 		bodieImports = addImport(bodieImports, "github.com/volatiletech/null/v8")
 	}
-	if err := populateTemplate("templates/bodies.gotpl", outputDir+"/generated_bodies.go", CreateAndUpdateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: createAndUpdateData, Imports: bodieImports, AuthField: getIdentifierFromAuthFields(authQueryFields)}); err != nil {
+	if err := populateTemplate("templates/bodies.gotpl", outputDir+"/generated_bodies.go", BodyTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: createAndUpdateData, Imports: bodieImports, AuthFields: authQueryFields}); err != nil {
 		return err
 	}
 
@@ -365,17 +471,28 @@ func parseTemplate(c *TemplateConfig) (string, error) {
 	tpl, err := template.New("").Funcs(template.FuncMap{
 		"toSnake":      camelToSnake,
 		"pluralize":    pluralize,
+		"singularize":  singularize,
 		"firstToLower": firstToLower,
 		"firstToUpper": firstToUpper,
 		"toLower":      strings.ToLower,
 		"isFalse": func(a bool) bool {
 			return !a
 		},
+		"everyRouteIsProtected": everyRouteIsProtected,
+		"isProtected": func(r []string, rn string) bool {
+			return stringArrayContains(r, rn)
+		},
+		"hasAuthFields": func(a []*JWTField) bool {
+			return len(a) > 0
+		},
 		"isNotNil": func(a *JWTField) bool {
 			return a != nil
 		},
 		"neq": func(a string, b string) bool {
 			return !strings.EqualFold(a, b)
+		},
+		"contains": func(a string, b string) bool {
+			return strings.Contains(a, b)
 		},
 		"eq": strings.EqualFold,
 		"getValidate": func(c *Column) string {
@@ -401,6 +518,14 @@ func parseTemplate(c *TemplateConfig) (string, error) {
 			}
 
 			return ""
+		},
+		"isAuthFieldInModel": func(cs []*Column, cl *JWTField) bool {
+			for _, c := range cs {
+				if c.IsRelation && strings.EqualFold(c.SnakeName, strings.TrimSuffix(cl.SnakeName, "_id")) {
+					return true
+				}
+			}
+			return false
 		},
 		"isUnique": func(c *Column) bool {
 			for _, attr := range c.Attributes {
@@ -451,6 +576,20 @@ func parseTemplate(c *TemplateConfig) (string, error) {
 
 			return false
 		},
+		"isInJwtField": isInJwtField,
+		"isNotInJwtField": func(snakeName string, fs []*JWTField) bool {
+			return !isInJwtField(snakeName, fs)
+		},
+		"isAuthTable": func(m *CreateAndUpdateDataModel) bool {
+			return m.IsAuthUser || m.IsAuthOrganization || m.IsAuthOrganizationUser
+		},
+		"getAuthQueryInBoolAnd": func(f []*JWTField) string {
+			var s []string
+			for _, ff := range f {
+				s = append(s, "!"+firstToLower(ff.TableCamelName)+"InBool")
+			}
+			return strings.Join(s, "&&")
+		},
 	}).Parse(c.Template)
 	if err != nil {
 		return "", fmt.Errorf("parse: %v", err)
@@ -469,6 +608,16 @@ func parseTemplate(c *TemplateConfig) (string, error) {
 	}
 
 	return string(formattedContent), nil
+}
+
+func isInJwtField(snakeName string, fs []*JWTField) bool {
+	for _, ff := range fs {
+		if strings.EqualFold(ff.SnakeName, snakeName) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func getRelations(f *ast.File, m *Model, pkgName string, models []*Model) []*ModelTemplateRelation {
@@ -526,11 +675,18 @@ func getRelations(f *ast.File, m *Model, pkgName string, models []*Model) []*Mod
 							}
 						}
 
+						if strings.HasPrefix(fieldType, "*") {
+							fieldType = strings.Replace(fieldType, "*"+pkgName+".", "*", 1)
+						} else {
+							fieldType = strings.Replace(fieldType, pkgName+".", "", 1)
+						}
+
 						r := ModelTemplateRelation{
 							Name:         field.Names[0].Name,
 							SingularName: singularName,
 							Type:         fieldType,
 							Columns:      columns,
+							IsArray:      strings.Contains(fieldType, "Slice"),
 						}
 
 						if field.Tag != nil {
@@ -548,4 +704,26 @@ func getRelations(f *ast.File, m *Model, pkgName string, models []*Model) []*Mod
 	})
 
 	return relations
+}
+
+func everyRouteIsProtected(r []string) bool {
+	allRoutes := []string{"LIST", "BYID", "CREATE", "UPDATE", "DELETE"}
+
+	for _, v := range allRoutes {
+		if !stringArrayContains(r, v) {
+			return false
+		}
+	}
+
+	return true
+
+}
+
+func stringArrayContains(arr []string, target string) bool {
+	for _, s := range arr {
+		if strings.EqualFold(s, target) {
+			return true
+		}
+	}
+	return false
 }

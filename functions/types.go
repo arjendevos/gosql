@@ -5,19 +5,23 @@ const (
 	atSignRegexp              = `@([a-zA-Z]+)`
 	modelRegexp               = `(?:^|\n)\s*([A-Z][a-zA-Z]*)\s*{((?:.|\n)*?)}`
 	modelRegexp2              = `(?:^|\n)\s*([A-Z][a-zA-Z]*)\s*{((?:.|\n)*?)}(?:\s*@(\w+))*`
+	modelRegexp3              = `(?:^|\n)\s*([A-Z][a-zA-Z]*)\s*{((?:.|\n)*?)}(?:\s*(.*))`
 	modelSplitRegexp          = `^\s*([A-Z][a-zA-Z]*)\s*{((?:.|\n)*?)}`
 	attributeWithValueRegexp  = `^@([a-zA-Z]+)\(([^)]+)\)`
 	attributeWithValueRegexp2 = `^@([a-zA-Z]+)\(([\s\S]+)\)`
 )
 
+//
+
 type Model struct {
-	SnakeName      string
-	CamelName      string
-	Columns        []*Column
-	IsAuthRequired bool
-	IsAuthUser     bool
-	IsAuthOrg      bool
-	IsAuthOrgLink  bool
+	SnakeName              string
+	CamelName              string
+	Columns                []*Column
+	IsAuthRequired         bool
+	IsAuthUser             bool
+	ProtectedRoutes        []string
+	IsAuthOrganization     bool
+	IsAuthOrganizationUser bool
 }
 
 type ModelWithRelations struct {
@@ -60,10 +64,15 @@ type HelpersTemplateData struct {
 }
 
 type JWTField struct {
-	NormalName string
-	CamelName  string
-	SnakeName  string
-	GoType     string
+	NormalName                  string
+	CamelName                   string
+	SnakeName                   string
+	GoType                      string
+	TableCamelName              string
+	TableSnakeName              string
+	IsFromUserTable             bool
+	IsFromOrganizationTable     bool
+	IsFromOrganizationUserTable bool
 }
 
 type GeneralTemplateData struct {
@@ -72,9 +81,10 @@ type GeneralTemplateData struct {
 }
 
 type QueryTemplateData struct {
-	PackageName string
-	Controllers []*Model
-	AuthFields  []*JWTField
+	PackageName           string
+	Controllers           []*Model
+	AuthFields            []*JWTField
+	HasMultipleAuthFields bool
 }
 
 type CreateAndUpdateDataModel struct {
@@ -92,6 +102,13 @@ type CreateAndUpdateData struct {
 	AuthField   *JWTField
 }
 
+type BodyTemplateData struct {
+	PackageName string
+	Controllers []*CreateAndUpdateDataModel
+	Imports     []string
+	AuthFields  []*JWTField
+}
+
 type SelectTemplateData struct {
 	PackageName string
 	Controllers []*ModelWithRelations
@@ -107,11 +124,17 @@ type ControllerTemplateData struct {
 }
 
 type AuthTemplateData struct {
-	PackageName   string
-	CamelName     string
-	Imports       []string
-	CreateColumns []*Column
-	JWTFields     []*JWTField
+	PackageName                   string
+	CamelName                     string
+	Imports                       []string
+	CreateColumns                 []*Column
+	JWTFields                     []*JWTField
+	HasOrganization               bool
+	OrganizationCamelName         string
+	OrganizationCreateColumns     []*Column
+	HasOrganizationUser           bool
+	OrganizationUserCamelName     string
+	OrganizationUserCreateColumns []*Column
 }
 
 type ModelTemplateRelation struct {
@@ -120,6 +143,7 @@ type ModelTemplateRelation struct {
 	Columns      []*Column
 	Type         string
 	Tag          string
+	IsArray      bool
 }
 
 type ModelTemplateData struct {

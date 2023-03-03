@@ -11,22 +11,29 @@ type {{ .CamelName }} struct {
         {{ .CamelName }} {{ .Type.GoTypeName }} `boil:"{{ .SnakeName }}" json:"{{ if .Expose }}{{ .SnakeName }}{{- else}}-{{- end}}" toml:"{{ .SnakeName }}" yaml:"{{  .SnakeName }}"`
     {{- end }}
 
-{{ range $relation := .Relations }}
-    {{ .Name }} {{ .Type }} `boil:"{{ toSnake .Name }}" json:"{{ toSnake .Name }}" toml:"{{ toSnake .Name }}" yaml:"{{ toSnake .Name }}"`
-{{- end }}
+    {{ range $relation := .Relations }}
+        {{ .Name }} {{ .Type }} `boil:"{{ toSnake .Name }}" json:"{{ toSnake .Name }}" toml:"{{ toSnake .Name }}" yaml:"{{ toSnake .Name }}"`
+    {{- end }}
 }
 
 type {{ .CamelName }}Slice []*{{ .CamelName }}
 
-func SqlBoiler{{ pluralize .CamelName }}ToApi{{ pluralize .CamelName }}(a dm.{{ .CamelName }}Slice) {{ .CamelName }}Slice {
-    var s {{ .CamelName }}Slice
-    for _, d := range a {
-        s = append(s, SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}(d))
+func SqlBoiler{{ pluralize .CamelName }}ToApi{{ pluralize .CamelName }}(a dm.{{ .CamelName }}Slice, exclude []string) {{ .CamelName }}Slice {
+    if exclude == nil {
+        exclude = []string{}
+    }
+    var s = make({{ .CamelName }}Slice, len(a))
+    for i, d := range a {
+        s[i] = SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}(d, exclude)
     }
     return s
 }
 
-func SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}(a *dm.{{ .CamelName }}) *{{ .CamelName }} {
+func SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}(a *dm.{{ .CamelName }}, exclude []string) *{{ .CamelName }} {
+    if exclude == nil {
+        exclude = []string{}
+    }
+    
     p := {{ .CamelName }}{
         {{- range $column := .Columns }}
         {{- if isNullableDBType .}}
@@ -37,13 +44,14 @@ func SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}(a *dm.{{ .CamelName }}) *{{ 
         {{- end}}
     }
 
-   if a.R != nil {
+    {{ $camelName := .CamelName }}
+    if a.R != nil {
         {{- range $relation := .Relations }}
-            if a.R.{{ .Name }} != nil {
-                p.{{ .Name }} = a.R.{{ .Name }}
+            if a.R.{{ .Name }} != nil && doesNotContain(exclude,"{{ $camelName}}.{{ .SingularName }}") {
+                p.{{ .Name }} = SqlBoiler{{ .Name }}ToApi{{.Name}}(a.R.{{ .Name }}, append(exclude, "{{ .SingularName}}.{{ $camelName }}"))
             }
         {{- end }}
-   }
+    }
 
     return &p
 }

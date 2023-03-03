@@ -27,8 +27,12 @@ func (c *{{ .CamelName}}Controller) List(ctx *gin.Context) {
 		return
 	}
 
-	{{ if .IsAuthRequired }}
-		authQueryMods := parse{{ .CamelName }}AuthToMods(ctx, {{if .IsAuthUser }}true{{- else}}false{{- end}})
+	{{ if isProtected .ProtectedRoutes "LIST" }}
+		authQueryMods, err := parse{{ .CamelName }}AuthToMods(ctx)
+		if err != nil {
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "invalid_request", "Invalid request", false))
+			return
+		}
 		queryMods = append(queryMods, authQueryMods...)
 	{{- end}}
 
@@ -38,7 +42,7 @@ func (c *{{ .CamelName}}Controller) List(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, responseWithPayload(am.SqlBoiler{{ pluralize .CamelName }}ToApi{{ pluralize .CamelName }}(payload), nil, nil, true))
+	ctx.JSON(http.StatusOK, responseWithPayload(am.SqlBoiler{{ pluralize .CamelName }}ToApi{{ pluralize .CamelName }}(payload, nil), nil, nil, true))
 }
 
 func (c *{{ .CamelName}}Controller) ByID(ctx *gin.Context) {
@@ -48,8 +52,12 @@ func (c *{{ .CamelName}}Controller) ByID(ctx *gin.Context) {
 		return
 	}
 
-	{{ if .IsAuthRequired }}
-		authQueryMods := parse{{ .CamelName }}AuthToMods(ctx, {{if .IsAuthUser }}true{{- else}}false{{- end}})
+	{{ if isProtected .ProtectedRoutes "BYID" }}
+		authQueryMods, err := parse{{ .CamelName }}AuthToMods(ctx)
+		if err != nil {
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "invalid_request", "Invalid request", false))
+			return
+		}
 		queryMods = append(queryMods, authQueryMods...)
 	{{- end}}
 
@@ -63,7 +71,7 @@ func (c *{{ .CamelName}}Controller) ByID(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, responseWithPayload(am.SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}(payload), nil, nil, true))
+	ctx.JSON(http.StatusOK, responseWithPayload(am.SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}(payload,nil), nil, nil, true))
 }
 
 func (c *{{ .CamelName}}Controller) Create(ctx *gin.Context) {
@@ -74,10 +82,14 @@ func (c *{{ .CamelName}}Controller) Create(ctx *gin.Context) {
 	}
 
 	var queryMods []qm.QueryMod
-	{{ if .IsAuthRequired }}
-		authQueryMods := parse{{ .CamelName }}AuthToMods(ctx, {{if .IsAuthUser }}true{{- else}}false{{- end}})
-		queryMods = append(queryMods, authQueryMods...)
-	{{- end}}
+	// {{ if isProtected .ProtectedRoutes "CREATE" }}
+	// 	authQueryMods, err := parse{{ .CamelName }}AuthToMods(ctx)
+	// 	if err != nil {
+	// 		ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "invalid_request", "Invalid request", false))
+	// 		return
+	// 	}
+	// 	queryMods = append(queryMods, authQueryMods...)
+	// {{- end}}
 
 	{{- $controller := .}}
 	{{- $controllerCamelName := .CamelName}}
@@ -98,7 +110,7 @@ func (c *{{ .CamelName}}Controller) Create(ctx *gin.Context) {
 			return
 		}
 		if count > 0 {
-			ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "duplicate", "Duplicate entry", false))
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "duplicate", "{{.CamelName}} already exists", false))
 			return
 		}
 	}
@@ -110,7 +122,7 @@ func (c *{{ .CamelName}}Controller) Create(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, responseWithPayload(am.SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}(model), nil, nil, true))
+	ctx.JSON(http.StatusOK, responseWithPayload(am.SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}(model, nil), nil, nil, true))
 }
 
 func (c *{{ .CamelName}}Controller) Update(ctx *gin.Context) {
@@ -120,8 +132,12 @@ func (c *{{ .CamelName}}Controller) Update(ctx *gin.Context) {
 		return
 	}
 
-	{{ if .IsAuthRequired }}
-		authQueryMods := parse{{ .CamelName }}AuthToMods(ctx, {{if .IsAuthUser }}true{{- else}}false{{- end}})
+	{{ if isProtected .ProtectedRoutes "UPDATE" }}
+		authQueryMods, err := parse{{ .CamelName }}AuthToMods(ctx)
+		if err != nil {
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "invalid_request", "Invalid request", false))
+			return
+		}
 		queryMods = append(queryMods, authQueryMods...)
 	{{- end}}
 
@@ -148,7 +164,7 @@ func (c *{{ .CamelName}}Controller) Update(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, responseWithPayload(am.SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}(existing), nil, nil, true))
+	ctx.JSON(http.StatusOK, responseWithPayload(am.SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}(existing, nil), nil, nil, true))
 }
 
 func (c *{{ .CamelName}}Controller) Delete(ctx *gin.Context) {
@@ -158,8 +174,12 @@ func (c *{{ .CamelName}}Controller) Delete(ctx *gin.Context) {
 		return
 	}
 
-	{{ if .IsAuthRequired }}
-		authQueryMods := parse{{ .CamelName }}AuthToMods(ctx, {{if .IsAuthUser }}true{{- else}}false{{- end}})
+	{{ if isProtected .ProtectedRoutes "DELETE" }}
+		authQueryMods, err := parse{{ .CamelName }}AuthToMods(ctx)
+		if err != nil {
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "invalid_request", "Invalid request", false))
+			return
+		}
 		queryMods = append(queryMods, authQueryMods...)
 	{{- end}}
 

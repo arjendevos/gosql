@@ -28,7 +28,17 @@ Add `authUser` after your model to make it the main table for your user authenti
 - `email string @unique`
 - `password string`
 
-You can exclude any table from the authentication by adding `@noAuth` after the table name. This doesn't work good though.
+You can exclude any table from the authentication by adding `@noAuth` after the table name.
+
+`@noAuth` is deprecated, use `@protected` instead.
+
+`@protected` has the following options (`@protected(LIST, BYID, CREATE, UPDATE, DELETE)`):
+
+- `LIST` - To protect the list endpoint
+- `BYID` - To protect the by id endpoint
+- `CREATE` - To protect the create endpoint
+- `UPDATE` - To protect the update endpoint
+- `DELETE` - To protect the delete endpoint
 
 ### Data types
 
@@ -69,13 +79,15 @@ You can create a relation by adding a column name (this should be the table name
 - [x] limit=3
 - [x] page=4
 - [x] filter={"column": {"equals":"true"}}
-- [x] rels={"relationTable":true}
+- [x] rels={"relationTable":{}}
+- [x] rels={"relationTable":{"deeperRelation":{ etc... }}}
 - [x] order={"column": "desc", "column":"asc"}
 - [ ] filter={"column":{"equals":true, "or": {"lessThan": 4}}}
 - [ ] filter={"column":{"equals":true, "and": {"lessThan": 4}}}
 - [ ] filter={"column":{"equals":true, "or": {"lessThan": 4, "and": {"isNotIn": ["d"]}}}}
 - [ ] rels={"relationTable":{"\_limit":4, "\_page":1}} // limit relation array -> only for nToMany relations
 - [ ] select={"column":true"}
+- [x] from=organization | from=user | no parameter (organization = get by organization id, get = fetch by user id, no parameter = get by organization id & user id)
 
 ### IDs
 
@@ -93,9 +105,13 @@ You can create a relation by adding a column name (this should be the table name
 - [ ] Export to typescript types
 - [ ] Generate postgresql database setup files (client & migrations)
 - [ ] Auto install deps
-- [ ] Add authorization on User & Organization
-- [ ] User authentication
+- [x] Add authorization on User & Organization
+- [x] User authentication
+- [ ] fetch items based on user_id or organization_id
 - [ ] Add select columns (normal not on relations) // Not possible for now due to the sqlboiler implementation
+- [x] expose relation ids in api
+- [x] fetch relations for every request except create
+- [x] change relations to include relations of relation
 
 ### Steps for setting up an api:
 

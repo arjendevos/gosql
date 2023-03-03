@@ -11,7 +11,7 @@ import (
     type {{ .CamelName}}Relations struct {
         {{ range $relation := .Relations }}
             // {{ .Name }} *Select{{ .SingularName }}Columns `boil:"{{ firstToLower .Name }}" json:"{{ firstToLower .Name}}" toml:"{{ firstToLower .Name}}" yaml:"{{ firstToLower .Name}}"`
-			{{ .Name }} *bool `boil:"{{ firstToLower .Name }}" json:"{{ firstToLower .Name}}" toml:"{{ firstToLower .Name}}" yaml:"{{ firstToLower .Name}}"`
+			{{ .Name }} *{{.SingularName}}Relations `boil:"{{ firstToLower .Name }}" json:"{{ firstToLower .Name}}" toml:"{{ firstToLower .Name}}" yaml:"{{ firstToLower .Name}}"`
         {{- end }}
     }
 
@@ -24,12 +24,24 @@ import (
 		return &relationsValue, nil
 	}
 
-	func parse{{ .CamelName}}RelationsToMods(relations *{{ .CamelName}}Relations) ([]qm.QueryMod, error) {
+	func parse{{ .CamelName}}RelationsToMods(relations *{{ .CamelName}}Relations, loadFrom string) ([]qm.QueryMod, error) {
 		var queryMods []qm.QueryMod
 
+		{{ $relationName := .CamelName }}
 		{{ range $relation := .Relations }}
-		if  relations.{{ .Name }} != nil && *relations.{{ .Name }} {
-			queryMods = append(queryMods, qm.Load("{{ .Name }}"))
+		if relations.{{ .Name }} != nil {
+			if len(loadFrom) > 0 {
+				loadFrom += "."
+			}
+
+			queryMods = append(queryMods, qm.Load(loadFrom+"{{ .Name }}"))
+
+			deeperQueryMods, err := parse{{.SingularName}}RelationsToMods(relations.{{ .Name }}, loadFrom +"{{.Name}}")
+			if err != nil {
+				return nil, err
+			}
+
+			queryMods = append(queryMods, deeperQueryMods...)
 		}
 		{{- end }}
 

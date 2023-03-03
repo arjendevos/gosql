@@ -36,23 +36,63 @@ func parseGoSQLFile(fileName string) (string, []*Model) {
 	sqlTypeMatch := sqlTypeCompiled.FindString(str)
 	sqlType = sqlTypeMatch[1:]
 
-	re := regexp.MustCompile(modelRegexp2)
+	re := regexp.MustCompile(modelRegexp3)
 	match := re.FindAllStringSubmatch(str, -1)
 
-	var hasAuth bool
-	var authModel *Model
+	var hasAuthUser bool
+	var hasAuthOrganization bool
+	var hasAuthOrganizationUser bool
 
 	for _, m := range match {
-		atStrings := m[3:]
-		// re := regexp.MustCompile(modelSplitRegexp)
-		// match := re.FindStringSubmatch(model)
-
+		extraAttributeLine := m[3]
 		if len(match) <= 1 {
 			panic("Invalid model definition")
 		}
 
 		name := camelToSnake(m[1])
 		body := strings.TrimSpace(m[2])
+
+		attrRegex := regexp.MustCompile(`@?(\w+)\(([^)]*)\)|@(\w+)`)
+		attrMatch := attrRegex.FindAllStringSubmatch(extraAttributeLine, -1)
+
+		protectedRoutes := []string{}
+		isAuthUser := false
+		isAuthOrganization := false
+		isAuthOrganizationUser := false
+
+		for _, match := range attrMatch {
+			if match[1] != "" {
+				// fmt.Printf("%s: %v\n", match[1], match[2])
+
+				if match[1] == "protected" {
+					x := strings.Split(match[2], ",")
+					for _, y := range x {
+						protectedRoutes = append(protectedRoutes, strings.TrimSpace(strings.ReplaceAll(strings.ReplaceAll(y, `"`, ""), `'`, "")))
+					}
+				}
+
+			} else {
+				// fmt.Printf("%s\n", match[3])
+				if match[3] == "protected" {
+					protectedRoutes = []string{"LIST", "BYID", "CREATE", "UPDATE", "DELETE"}
+				}
+
+				if strings.EqualFold(match[3], "authUser") {
+					isAuthUser = true
+					hasAuthUser = true
+				}
+
+				if strings.EqualFold(match[3], "authOrganization") {
+					isAuthOrganization = true
+					hasAuthOrganization = true
+				}
+
+				if strings.EqualFold(match[3], "authOrganizationUser") {
+					isAuthOrganizationUser = true
+					hasAuthOrganizationUser = true
+				}
+			}
+		}
 
 		var columns []*Column
 
@@ -128,129 +168,64 @@ func parseGoSQLFile(fileName string) (string, []*Model) {
 			})
 		}
 
-		isAuthRequired := true
-		var isAuthUser, isAuthOrg, isAuthOrgLink bool
-
-		for _, a := range atStrings {
-			if strings.Contains(a, "authUser") {
-				isAuthUser = true
-
-				var isValidEmailColumn bool
-				var isValidPasswordColumn bool
-				for _, c := range columns {
-					if c.SnakeName == "email" && c.Type.Name == "string" {
-						for _, a := range c.Attributes {
-							if a.Name == "unique" {
-								isValidEmailColumn = true
-							}
+		if isAuthUser {
+			var isValidEmailColumn bool
+			var isValidPasswordColumn bool
+			for _, c := range columns {
+				if c.SnakeName == "email" && c.Type.Name == "string" {
+					for _, a := range c.Attributes {
+						if a.Name == "unique" {
+							isValidEmailColumn = true
 						}
 					}
-
-					if c.SnakeName == "password" && c.Type.Name == "string" {
-						isValidPasswordColumn = true
-					}
 				}
 
-				if !isValidEmailColumn {
-					panic("Auth user model must have a unique email column")
-				}
-
-				if !isValidPasswordColumn {
-					panic("Auth user model must have a password column")
+				if c.SnakeName == "password" && c.Type.Name == "string" {
+					isValidPasswordColumn = true
 				}
 			}
 
-			if strings.Contains(a, "authOrg") {
-				isAuthOrg = true
+			if !isValidEmailColumn {
+				panic("AuthUser model must have a unique email column")
 			}
 
-			if strings.Contains(a, "authOrgLink") {
-				isAuthOrgLink = true
-			}
-
-			if strings.Contains(a, "noAuth") {
-				isAuthRequired = false
+			if !isValidPasswordColumn {
+				panic("AuthUser model must have a password column")
 			}
 		}
 
 		m := &Model{
-			SnakeName:      name,
-			CamelName:      snakeToCamel(name),
-			Columns:        columns,
-			IsAuthRequired: isAuthRequired,
-			IsAuthUser:     isAuthUser,
-			IsAuthOrg:      isAuthOrg,
-			IsAuthOrgLink:  isAuthOrgLink,
+			SnakeName:              name,
+			CamelName:              snakeToCamel(name),
+			Columns:                columns,
+			IsAuthRequired:         false, // @deprecated
+			IsAuthUser:             isAuthUser,
+			ProtectedRoutes:        protectedRoutes,
+			IsAuthOrganization:     isAuthOrganization,
+			IsAuthOrganizationUser: isAuthOrganizationUser,
 		}
 
 		models = append(models, m)
 
-		if m.IsAuthUser {
-			hasAuth = true
-			authModel = m
-		}
+		// for _, m := range models {
+		// 	fmt.Println(m.Name)
+		// 	for _, c := range m.Columns {
+		// 		fmt.Println(c.Name)
+		// 		fmt.Println("  ", c.Type.Name)
+		// 		fmt.Println("  ", c.Type.IsNullable)
+		// 		fmt.Println("  ", c.Type.HasDifferentCharLength)
+		// 		fmt.Println("  ", c.Type.CharLength)
+
+		// 		for _, a := range c.Attributes {
+		// 			fmt.Println("    ", a.Name, a.Value, a.HasValue)
+		// 		}
+		// 	}
+		// }
 	}
 
-	if hasAuth {
-		for _, m := range models {
-			if m.IsAuthUser {
-				continue
-			}
-
-			// var idType *Type
-			// for _, c := range m.Columns {
-			// 	if c.SnakeName == "id" {
-			// 		idType = c.Type
-			// 	}
-			// }
-
-			var hasAuthUser bool
-			for _, c := range m.Columns {
-				if c.IsRelation && strings.EqualFold(c.Type.Name, authModel.CamelName) {
-					hasAuthUser = true
-				}
-			}
-
-			if hasAuthUser {
-				continue
-			}
-
-			// m.Columns = append(m.Columns, &Column{
-			// 	SnakeName: camelToSnake(authModel.CamelName),
-			// 	CamelName: snakeToCamel(authModel.SnakeName),
-			// 	Type: &Type{
-			// 		Name:                   firstToLower(authModel.CamelName),
-			// 		GoTypeName:             authModel.CamelName,
-			// 		IsNullable:             false,
-			// 		HasDifferentCharLength: false,
-			// 		CharLength:             255,
-			// 	},
-			// 	Attributes: []*Attribute{
-			// 		{
-			// 			Name:     "index",
-			// 			Value:    "",
-			// 			HasValue: false,
-			// 		},
-			// 	},
-			// 	IsRelation: true,
-			// })
-		}
+	if hasAuthOrganization && (!hasAuthUser || !hasAuthOrganizationUser) {
+		panic("If you have an organization model you must have an authUser and authOrganizationUser table")
 	}
-
-	// for _, m := range models {
-	// 	fmt.Println(m.Name)
-	// 	for _, c := range m.Columns {
-	// 		fmt.Println(c.Name)
-	// 		fmt.Println("  ", c.Type.Name)
-	// 		fmt.Println("  ", c.Type.IsNullable)
-	// 		fmt.Println("  ", c.Type.HasDifferentCharLength)
-	// 		fmt.Println("  ", c.Type.CharLength)
-
-	// 		for _, a := range c.Attributes {
-	// 			fmt.Println("    ", a.Name, a.Value, a.HasValue)
-	// 		}
-	// 	}
-	// }
 
 	return sqlType, models
 
@@ -329,3 +304,5 @@ func shouldExpose(at []*Attribute) bool {
 
 	return true
 }
+
+// 2056 - 1303 = 753

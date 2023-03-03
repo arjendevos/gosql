@@ -12,7 +12,9 @@ type Client struct {
 }
 
 type Controllers struct {
-	Auth *AuthController
+	{{- if hasAuthFields .AuthFields}}
+		Auth *AuthController
+	{{- end}}
     {{ range $controller := .Controllers }}
         {{ .CamelName }} *{{ .CamelName }}Controller
     {{- end }}
@@ -22,7 +24,10 @@ func newClient(db *sql.DB) *Controllers {
 	ctx := context.Background()
 	client := &Client{db: db, ctx: ctx}
 	return &Controllers{
-		Auth: &AuthController{client},
+		{{- if hasAuthFields .AuthFields}}
+			Auth: &AuthController{client},
+		{{- end}}
+		
         {{ range $controller := .Controllers }}
             {{ .CamelName }}: &{{ .CamelName }}Controller{client},
         {{- end }}

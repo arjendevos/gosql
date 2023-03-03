@@ -6,6 +6,8 @@ import (
 	"errors"
 	"net/http"
 	"os"
+	"strings"
+
 
 	"github.com/gin-gonic/gin"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
@@ -21,13 +23,13 @@ type AuthController struct {
 	*Client
 }
 
-type AuthBody struct {
+type SignInBody struct {
 	Email    string `json:"email" validate:"regexp=^[0-9a-z]+@[0-9a-z]+(\\.[0-9a-z]+)+$"`
 	Password string `json:"password" validate:"min=8,max=32"`
 }
 
 func (c *AuthController) SignIn(ctx *gin.Context) {
-	var body AuthBody
+	var body SignInBody
 	if err := bindAndValidateJSON(ctx, &body); err != nil {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "invalid_request", "Invalid request", false))
 		return
@@ -35,6 +37,11 @@ func (c *AuthController) SignIn(ctx *gin.Context) {
 
 	var queryMods []qm.QueryMod
 	queryMods = append(queryMods, qm.Where("email = ?", body.Email))
+
+	{{- if and .HasOrganization .HasOrganizationUser}}
+		queryMods = append(queryMods, qm.Load(dm.{{ .CamelName }}Rels.{{ pluralize .OrganizationUserCamelName}}))
+		queryMods = append(queryMods, qm.Load(dm.{{ .CamelName }}Rels.{{ pluralize .OrganizationUserCamelName}} + "." + dm.{{ .OrganizationUserCamelName}}Rels.{{ .OrganizationCamelName}}))
+	{{- end}}
 
 	{{ $dbVariable := firstToLower .CamelName}}
 
@@ -54,9 +61,19 @@ func (c *AuthController) SignIn(ctx *gin.Context) {
 		return
 	}
 
+	{{ $userCamelName := .CamelName}}
+	{{ $organizationCamelName := .OrganizationCamelName}}
+	{{ $organizationUserCamelName := .OrganizationUserCamelName}}
+
 	jwtPayload := &JWTPayload{
 		{{- range $jwt := .JWTFields }}
-        	{{ .CamelName }}: {{ $dbVariable }}.{{.NormalName}},
+			{{- if .IsFromUserTable }}
+        		{{ .CamelName }}: {{ $dbVariable }}.{{.NormalName}},
+			{{- else if .IsFromOrganizationTable }}
+				{{ .CamelName }}: {{ $dbVariable }}.R.{{ pluralize $organizationUserCamelName }}[0].R.{{ $organizationCamelName}}.{{.NormalName}},
+			{{- else if .IsFromOrganizationUserTable }}
+				{{ .CamelName }}: {{ $dbVariable }}.R.{{ pluralize $organizationUserCamelName }}[0].{{.NormalName}},
+			{{- end}}
     	{{- end }}
 	}
 	tokenString, err := GenerateJWT(jwtPayload)
@@ -67,68 +84,185 @@ func (c *AuthController) SignIn(ctx *gin.Context) {
 	ctx.SetSameSite(http.SameSiteLaxMode)
 	ctx.SetCookie("Authorization", tokenString, 3600*24*7, "/", os.Getenv("APP_DOMAIN"), false, true)
 
-	ctx.JSON(http.StatusOK, responseWithPayload(am.SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}({{ $dbVariable}}), nil, nil, true))
+	ctx.JSON(http.StatusOK, responseWithPayload(am.SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}({{ $dbVariable}}, nil), nil, nil, true))
+}
+
+type SignUpBody struct {
+	{{.CamelName}} *AccountCreateBody `json:"account" validate:"nonzero"`
+	{{- if and .HasOrganization .HasOrganizationUser}}
+		{{ .OrganizationCamelName}} struct {
+			*{{ .OrganizationCamelName }}CreateBody `validate:"nonzero"`
+			*{{ .OrganizationUserCamelName }}CreateBodyWithoutRelations `validate:"nonzero"`
+		} `json:"organization" validate:"nonzero"`
+	{{- end }}
 }
 
 func (c *AuthController) SignUp(ctx *gin.Context) {
-	body, err := parse{{ .CamelName }}CreateBody(ctx)
-	if err != nil {
+	var body SignUpBody
+	if err := bindAndValidateJSON(ctx, &body); err != nil {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "invalid_request", "Invalid request", false))
 		return
 	}
-	var queryMods []qm.QueryMod
-	{{- $controller := .}}
-	{{- $controllerCamelName := .CamelName}}
-	{{- range $column := .CreateColumns }}
-		{{- if isUnique . }}
-			{{- if isNotFirstUnique $controller.CreateColumns $column }}
-				queryMods = append(queryMods, qm.Or2(dm.{{ $controllerCamelName }}Where.{{ .CamelName }}.EQ(body.{{ .CamelName }})))
-			{{- else }}
-				queryMods = append(queryMods, dm.{{ $controllerCamelName }}Where.{{ .CamelName }}.EQ(body.{{ .CamelName }}))
-			{{- end}}
-		{{- end}}
-	{{- end}}
 
-	if len(queryMods) > 0 {
-		count, err := dm.{{pluralize .CamelName}}(queryMods...).Count(ctx, c.db)
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err := validateObject(body.{{.CamelName}}); err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "invalid_request", "Invalid request", false))
+		return
+	}
+
+	{{ if and .HasOrganization .HasOrganizationUser}}
+		if err := validateObject(body.{{ .OrganizationCamelName}}.{{.OrganizationCamelName}}CreateBody); err != nil {
 			ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "invalid_request", "Invalid request", false))
 			return
 		}
-		if count > 0 {
-			ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "duplicate", "Duplicate entry", false))
+
+		if err := validateObject(body.{{ .OrganizationCamelName}}.{{.OrganizationUserCamelName}}CreateBodyWithoutRelations); err != nil {
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "invalid_request", "Invalid request", false))
 			return
 		}
-	}
+	{{- end }}
 
-	model := {{ firstToLower .CamelName}}CreateBodyToSqlBoiler(ctx, body)
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(body.Password), 14)
+	var tokenString string
+	err := Transactor(c.db, func(tx *sql.Tx) error {
+		var queryMods []qm.QueryMod
+		{{- $controller := .}}
+		{{- $controllerCamelName := .CamelName}}
+		{{- range $column := .CreateColumns }}
+			{{- if isUnique . }}
+				{{- if isNotFirstUnique $controller.CreateColumns $column }}
+					queryMods = append(queryMods, qm.Or2(dm.{{ $controllerCamelName }}Where.{{ .CamelName }}.EQ(body.{{$controllerCamelName}}.{{ .CamelName }})))
+				{{- else }}
+					queryMods = append(queryMods, dm.{{ $controllerCamelName }}Where.{{ .CamelName }}.EQ(body.{{$controllerCamelName}}.{{ .CamelName }}))
+				{{- end}}
+			{{- end}}
+		{{- end}}
+
+		if len(queryMods) > 0 {
+			count, err := dm.{{pluralize .CamelName}}(queryMods...).Count(ctx, c.db)
+			if err != nil && !errors.Is(err, sql.ErrNoRows) {
+				return errors.New("Invalid request")
+			}
+			if count > 0 {
+				return errors.New("{{ .CamelName }} already exists")
+			}
+		}
+
+		{{- if and .HasOrganization .HasOrganizationUser}}
+			var organizationQueryMods []qm.QueryMod
+			{{- $organizationCreateColumns := .OrganizationCreateColumns}}
+			{{- $controllerCamelName := .OrganizationCamelName}}
+			{{- range $column := .OrganizationCreateColumns }}
+				{{- if isUnique . }}
+					{{- if isNotFirstUnique $organizationCreateColumns $column }}
+						organizationQueryMods = append(organizationQueryMods, qm.Or2(dm.{{ $controllerCamelName }}Where.{{ .CamelName }}.EQ(body.{{$controllerCamelName}}.{{ .CamelName }})))
+					{{- else }}
+						queryMods = append(organizationQueryMods, dm.{{ $controllerCamelName }}Where.{{ .CamelName }}.EQ(body.{{$controllerCamelName}}.{{ .CamelName }}))
+					{{- end}}
+				{{- end}}
+			{{- end}}
+
+			if len(organizationQueryMods) > 0 {
+				count, err := dm.{{pluralize .OrganizationCamelName}}(queryMods...).Count(ctx, c.db)
+				if err != nil && !errors.Is(err, sql.ErrNoRows) {
+					return errors.New("Invalid request")
+				}
+				if count > 0 {
+					return errors.New("{{ .OrganizationCamelName }} already exists")
+				}
+			}
+		{{- end }}
+
+		model{{.CamelName}} := {{ firstToLower .CamelName}}CreateBodyToSqlBoiler(ctx, body.{{.CamelName}})
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(body.{{.CamelName}}.Password), 14)
+		if err != nil {
+			return errors.New("Something went wrong, try again later")
+		}
+
+		model{{.CamelName}}.Password = string(hashedPassword)
+		err = model{{.CamelName}}.Insert(ctx, c.db, boil.Infer())
+		if err != nil {
+			return errors.New("Something went wrong, try again later")
+		}
+
+		{{ if and .HasOrganization .HasOrganizationUser}}
+			model{{.OrganizationCamelName}} := {{ firstToLower .OrganizationCamelName}}CreateBodyToSqlBoiler(ctx, body.{{.OrganizationCamelName}}.{{.OrganizationCamelName}}CreateBody)
+			err = model{{.OrganizationCamelName}}.Insert(ctx, c.db, boil.Infer())
+			if err != nil {
+				return errors.New("Something went wrong, try again later")
+			}
+			
+			model{{.OrganizationUserCamelName}} := {{ firstToLower .OrganizationUserCamelName}}CreateBodyToSqlBoiler(ctx, &{{.OrganizationUserCamelName}}CreateBody{
+				{{ .OrganizationCamelName}}ID: model{{.OrganizationCamelName}}.ID,
+				{{ .CamelName}}ID: model{{.CamelName}}.ID,
+				{{- range .OrganizationUserCreateColumns }}
+					{{- if or (contains .CamelName $organizationCamelName) (contains .CamelName $userCamelName) }}
+					{{- else}}
+						{{ .CamelName }}: body.{{ $organizationCamelName}}.{{.CamelName}},
+					{{- end }}
+				{{- end }}
+			})
+			err = model{{.OrganizationUserCamelName}}.Insert(ctx, c.db, boil.Infer())
+			if err != nil {
+				return errors.New("Something went wrong, try again later")
+			}
+
+		{{- end}}
+
+		jwtPayload := &JWTPayload{
+			{{- range $jwt := .JWTFields }}
+				{{- if .IsFromUserTable }}
+					{{ .CamelName }}: model{{ $userCamelName }}.{{.NormalName}},
+				{{- else if .IsFromOrganizationTable }}
+					{{ .CamelName }}: model{{ $organizationCamelName}}.{{.NormalName}},
+				{{- else if .IsFromOrganizationUserTable }}
+					{{ .CamelName }}: model{{ $organizationUserCamelName}}.{{.NormalName}},
+				{{- end}}
+			{{- end }}
+		}
+		tokenString, err = GenerateJWT(jwtPayload)
+		if err != nil {
+			return errors.New("Invalid request")
+		}
+		return nil
+	})
 	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil,"generic", "Something went wrong, try again later", false))
+		if strings.Contains(err.Error(), "already exists") {
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "duplicate", err.Error(), false))
+			return
+		}
+
+		if strings.Contains(err.Error(), "Invalid request") {
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "invalid_request", err.Error(), false))
+			return
+		}
+
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "generic", err.Error(), false))
 		return
 	}
 
-	model.Password = string(hashedPassword)
-	err = model.Insert(ctx, c.db, boil.Infer())
-	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "generic", "Something went wrong", false))
+	var queryMods []qm.QueryMod
+	queryMods = append(queryMods, qm.Where("email = ?", body.{{.CamelName}}.Email))
+
+	{{- if and .HasOrganization .HasOrganizationUser}}
+		queryMods = append(queryMods, qm.Load(dm.{{ .CamelName }}Rels.{{ pluralize .OrganizationUserCamelName}}))
+		queryMods = append(queryMods, qm.Load(dm.{{ .CamelName }}Rels.{{ pluralize .OrganizationUserCamelName}} + "." + dm.{{ .OrganizationUserCamelName}}Rels.{{ .OrganizationCamelName}}))
+	{{- end}}
+
+	{{ $dbVariable := firstToLower .CamelName}}
+
+	{{ $dbVariable }}, err := dm.{{pluralize .CamelName}}(queryMods...).One(ctx, c.db)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "invalid_request", "Invalid request", false))
+		return
+	}
+	if {{ $dbVariable }} == nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "incorrect_auth", "Email or password is incorrect", false))
 		return
 	}
 
-	jwtPayload := &JWTPayload{
-		{{- range $jwt := .JWTFields }}
-        	{{ .CamelName }}: model.{{ .NormalName }},
-    	{{- end }}
-	}
-	tokenString, err := GenerateJWT(jwtPayload)
-	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "invalid_input", "Invalid input", false))
-		return
-	}
 	ctx.SetSameSite(http.SameSiteLaxMode)
 	ctx.SetCookie("Authorization", tokenString, 3600*24*7, "/", os.Getenv("APP_DOMAIN"), false, true)
 
-	ctx.JSON(http.StatusOK, responseWithPayload(am.SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}(model), nil, nil, true))
+	ctx.JSON(http.StatusOK, responseWithPayload(am.SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}({{ $dbVariable }}, nil), nil, nil, true))
 }
 
 func (c *AuthController) SignOut(ctx *gin.Context) {
@@ -142,8 +276,17 @@ func (c *AuthController) Me(ctx *gin.Context) {
 	var queryMods []qm.QueryMod
 
 	{{- range $jwt := .JWTFields }}
-		queryMods = append(queryMods, qm.Where("{{ toLower .NormalName }} = ?", ctx.Value("{{ .SnakeName }}").({{ .GoType}})))
+		{{- if .IsFromUserTable }}
+			queryMods = append(queryMods, qm.Where("{{ toLower .NormalName }} = ?", ctx.Value("{{ .SnakeName }}").({{ .GoType}})))
+		{{- else if .IsFromOrganizationTable }}
+		{{- else if .IsFromOrganizationUserTable }}
+		{{- end}}
 	{{- end }}
+
+	{{ if and .HasOrganization .HasOrganizationUser}}
+		queryMods = append(queryMods, qm.Load(dm.{{ .CamelName }}Rels.{{ pluralize .OrganizationUserCamelName}}))
+		queryMods = append(queryMods, qm.Load(dm.{{ .CamelName }}Rels.{{ pluralize .OrganizationUserCamelName}} + "." + dm.{{ .OrganizationUserCamelName}}Rels.{{ .OrganizationCamelName}}))
+	{{- end}}
 
 	payload, err := dm.{{pluralize .CamelName}}( queryMods...).One(ctx, c.db)
 	if err != nil {
@@ -151,5 +294,5 @@ func (c *AuthController) Me(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, responseWithPayload(am.SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}(payload), nil, nil, true))
+	ctx.JSON(http.StatusOK, responseWithPayload(am.SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}(payload, nil), nil, nil, true))
 }

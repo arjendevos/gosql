@@ -32,21 +32,22 @@ func RunApi(db *sql.DB, c *ApiConfig) {
 		AllowCredentials: true,
 	}))
 
-    router.POST("/auth/signin", controllers.Auth.SignIn)
-    router.POST("/auth/signup", controllers.Auth.SignUp)
-    router.POST("/auth/signout", controllers.Auth.SignOut)
-    router.Use(AuthMiddleware()).POST("/me", controllers.Auth.Me)
+    {{- if hasAuthFields .AuthFields }}
+        router.POST("/auth/signin", controllers.Auth.SignIn)
+        router.POST("/auth/signup", controllers.Auth.SignUp)
+        router.POST("/auth/signout", controllers.Auth.SignOut)
+        router.Use(AuthMiddleware()).GET("/auth/me", controllers.Auth.Me)
+    {{- end}}
+
+    
 
 {{ range $controller := .Controllers }}
-    {{ if .IsAuthUser }}
-    {{- else}}
-        {{ firstToLower .CamelName }} := router.Group("/{{ .SnakeName }}"){{ if .IsAuthRequired }}.Use(AuthMiddleware()){{- end}}
-        {{ firstToLower .CamelName }}.GET("", controllers.{{ .CamelName}}.List)
-        {{ firstToLower .CamelName }}.GET(":id", controllers.{{ .CamelName}}.ByID)
-        {{ firstToLower .CamelName }}.POST("", controllers.{{ .CamelName}}.Create)
-        {{ firstToLower .CamelName }}.PATCH(":id", controllers.{{ .CamelName}}.Update)
-        {{ firstToLower .CamelName }}.DELETE(":id", controllers.{{ .CamelName}}.Delete)
-    {{- end}}
+        {{ firstToLower .CamelName }} := router.Group("/{{ .SnakeName }}"){{ if everyRouteIsProtected .ProtectedRoutes }}.Use(AuthMiddleware()){{- end}}
+        {{ firstToLower .CamelName }}.{{- if everyRouteIsProtected .ProtectedRoutes }}{{- else if isProtected .ProtectedRoutes "LIST" }}Use(AuthMiddleware()).{{- end}}GET("", controllers.{{ .CamelName}}.List)
+        {{ firstToLower .CamelName }}.{{- if everyRouteIsProtected .ProtectedRoutes }}{{- else if isProtected .ProtectedRoutes "BYID" }}Use(AuthMiddleware()).{{- end}}GET(":id", controllers.{{ .CamelName}}.ByID)
+        {{ firstToLower .CamelName }}.{{- if everyRouteIsProtected .ProtectedRoutes }}{{- else if isProtected .ProtectedRoutes "CREATE" }}Use(AuthMiddleware()).{{- end}}POST("", controllers.{{ .CamelName}}.Create)
+        {{ firstToLower .CamelName }}.{{- if everyRouteIsProtected .ProtectedRoutes }}{{- else if isProtected .ProtectedRoutes "UPDATE" }}Use(AuthMiddleware()).{{- end}}PATCH(":id", controllers.{{ .CamelName}}.Update)
+        {{ firstToLower .CamelName }}.{{- if everyRouteIsProtected .ProtectedRoutes }}{{- else if isProtected .ProtectedRoutes "DELETE" }}Use(AuthMiddleware()).{{- end}}DELETE(":id", controllers.{{ .CamelName}}.Delete)
 {{ end }}
 
     port := os.Getenv("PORT")   
