@@ -8,10 +8,11 @@ import (
 )
 
 type GoSQLConfig struct {
-	SchemeDir           string
-	MigrationDir        string
-	ModelOutputDir      string
-	ControllerOutputDir string
+	SchemeDir            string
+	MigrationDir         string
+	ModelOutputDir       string
+	ControllerOutputDir  string
+	CustomControllersDir string
 }
 
 func Convert(c *GoSQLConfig) {
@@ -29,7 +30,7 @@ func Convert(c *GoSQLConfig) {
 	for _, filePath := range files {
 		s := strings.Split(filePath, "/")
 		fileName := s[len(s)-1]
-		sqlType, models := parseGoSQLFile(filePath)
+		sqlType, models := ParseGoSQLFile(filePath)
 		err := c.ConvertToSql(fileName, sqlType, models)
 		if err != nil {
 			fmt.Println("ERR!", err)

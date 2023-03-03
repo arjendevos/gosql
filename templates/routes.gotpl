@@ -13,6 +13,9 @@ import (
 
 type ApiConfig struct {
     AllowOrigins []string
+    AllowMethods []string
+	AllowHeaders []string
+	CustomRoutes func(router *gin.Engine) *gin.Engine
 }
 
 func RunApi(db *sql.DB, c *ApiConfig) {
@@ -25,8 +28,8 @@ func RunApi(db *sql.DB, c *ApiConfig) {
 
     router := gin.Default()
 	router.Use(cors.New(cors.Config{
-		AllowMethods:     []string{"GET", "POST", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization", "Access-Control-Allow-Credentials", "cookie"},
+		AllowMethods:     append(c.AllowMethods, []string{"GET", "POST", "PATCH", "DELETE", "OPTIONS"}...),
+		AllowHeaders:     append(c.AllowHeaders, []string{"Origin", "Content-Length", "Content-Type", "Authorization", "Access-Control-Allow-Credentials", "cookie"}...),
 		AllowOrigins:     c.AllowOrigins,
 		MaxAge:           12 * time.Hour,
 		AllowCredentials: true,
@@ -41,14 +44,18 @@ func RunApi(db *sql.DB, c *ApiConfig) {
 
     
 
-{{ range $controller := .Controllers }}
+    {{ range $controller := .Controllers }}
         {{ firstToLower .CamelName }} := router.Group("/{{ .SnakeName }}"){{ if everyRouteIsProtected .ProtectedRoutes }}.Use(AuthMiddleware()){{- end}}
         {{ firstToLower .CamelName }}.{{- if everyRouteIsProtected .ProtectedRoutes }}{{- else if isProtected .ProtectedRoutes "LIST" }}Use(AuthMiddleware()).{{- end}}GET("", controllers.{{ .CamelName}}.List)
         {{ firstToLower .CamelName }}.{{- if everyRouteIsProtected .ProtectedRoutes }}{{- else if isProtected .ProtectedRoutes "BYID" }}Use(AuthMiddleware()).{{- end}}GET(":id", controllers.{{ .CamelName}}.ByID)
         {{ firstToLower .CamelName }}.{{- if everyRouteIsProtected .ProtectedRoutes }}{{- else if isProtected .ProtectedRoutes "CREATE" }}Use(AuthMiddleware()).{{- end}}POST("", controllers.{{ .CamelName}}.Create)
         {{ firstToLower .CamelName }}.{{- if everyRouteIsProtected .ProtectedRoutes }}{{- else if isProtected .ProtectedRoutes "UPDATE" }}Use(AuthMiddleware()).{{- end}}PATCH(":id", controllers.{{ .CamelName}}.Update)
         {{ firstToLower .CamelName }}.{{- if everyRouteIsProtected .ProtectedRoutes }}{{- else if isProtected .ProtectedRoutes "DELETE" }}Use(AuthMiddleware()).{{- end}}DELETE(":id", controllers.{{ .CamelName}}.Delete)
-{{ end }}
+    {{ end }}
+
+    if c.CustomRoutes != nil {
+        router = c.CustomRoutes(router)
+    }
 
     port := os.Getenv("PORT")   
 	if port == "" {

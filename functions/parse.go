@@ -9,7 +9,7 @@ import (
 	"unicode"
 )
 
-func parseGoSQLFile(fileName string) (string, []*Model) {
+func ParseGoSQLFile(fileName string) (string, []*Model) {
 	var sqlType string
 	var models []*Model
 
