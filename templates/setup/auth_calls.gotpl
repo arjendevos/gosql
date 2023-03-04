@@ -1,6 +1,7 @@
 package {{ .PackageName}}
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -22,7 +23,19 @@ func CallMiddleware(c *gin.Context) {
 	path := strings.TrimSuffix(strings.TrimPrefix(strings.ToLower(c.Request.URL.Path), "/"), "/")
 	pathSplitted := strings.Split(path, "/")
 
+	var methodCalls []string
 	var methodCall string
+
+	relations, hasRelationsQuery := c.GetQuery("rels")
+	if hasRelationsQuery {
+		extraCalls, err := convertRelationQueryToAuthCall(relations)
+		if err != nil {
+			c.AbortWithStatusJSON(401, generated.ResponseWithPayload(nil, "unauthorized", "You are unauthorized", false))
+			return
+		}
+
+		methodCalls = append(methodCalls, extraCalls...)
+	}
 
 	switch method {
 	case "GET":
@@ -48,15 +61,19 @@ func CallMiddleware(c *gin.Context) {
 		}
 	}
 
-	call := fmt.Sprintf("%s.%s", strings.Join(pathSplitted, "."), methodCall)
+	pathCall := fmt.Sprintf("%s.%s", strings.Join(pathSplitted, "."), methodCall)
+	methodCalls = append(methodCalls, pathCall)
 
-	if !authCalls[role.(string)][call] && !authCalls["all"][call] {
-		fmt.Println("Call not allowed:")
-		fmt.Println()
-		fmt.Println("    ", call)
-		fmt.Println()
-		c.AbortWithStatusJSON(401, generated.ResponseWithPayload(nil, "unauthorized", "You are unauthorized", false))
-		return
+	for _, call := range methodCalls {
+		fmt.Println("Call:", call)
+		if !authCalls[role.(string)][call] && !authCalls["all"][call] {
+			fmt.Println("Call not allowed:")
+			fmt.Println()
+			fmt.Println("    ", call)
+			fmt.Println()
+			c.AbortWithStatusJSON(401, generated.ResponseWithPayload(nil, "unauthorized", "You are unauthorized", false))
+			return
+		}
 	}
 
 	c.Next()
@@ -67,6 +84,67 @@ func contains(strSlice []gin.Param, str string) bool {
 		if s.Key == str {
 			return true
 		}
+	}
+	return false
+}
+
+func convertRelationQueryToAuthCall(relationQuery string) ([]string, error) {
+	var obj map[string]interface{}
+	err := json.Unmarshal([]byte(relationQuery), &obj)
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+
+	key := recursivelyFlattenMap("", obj)
+	return strings.Split(key, "-"), nil
+
+}
+
+func recursivelyFlattenMap(prefix string, m map[string]interface{}) string {
+	var key string
+
+	for k, v := range m {
+		switch v.(type) {
+		case map[string]interface{}:
+			newM := v.(map[string]interface{})
+			newKey := prefix + k
+			if isPlural(newKey) {
+				newKey = newKey + ".list"
+			} else {
+				newKey = newKey + ".byid"
+			}
+
+			if len(newM) <= 0 {
+				key += newKey
+			}
+			key2 := recursivelyFlattenMap(newKey+"-", newM)
+			key += key2
+		default:
+			// is never called
+			// keys = append(keys, prefix+k)
+		}
+	}
+
+	return key
+}
+
+func isPlural(word string) bool {
+	if len(word) > 1 && word[len(word)-1] == 's' {
+		// Most plural words end in "s"
+		return true
+	}
+	if len(word) > 2 && word[len(word)-2:] == "es" {
+		// Some plural words end in "es"
+		return true
+	}
+	if len(word) > 2 && word[len(word)-2:] == "en" {
+		// Some irregular plural words end in "en"
+		return true
+	}
+	if len(word) > 3 && word[len(word)-3:] == "ies" {
+		// Some singular words end in "y" and change to "ies" when pluralized
+		return true
 	}
 	return false
 }

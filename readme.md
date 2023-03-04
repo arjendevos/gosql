@@ -117,13 +117,14 @@ You can create a relation by adding a column name (this should be the table name
 - [x] limit=3
 - [x] page=4
 - [x] filter={"column": {"equals":"true"}}
-- [x] rels={"relationTable":{}}
-- [x] rels={"relationTable":{"deeperRelation":{ etc... }}} (you can't call the parent relation in the child relation)
-- [x] order={"column": "desc", "column":"asc"}
 - [x] filter={"column":{"equals":true, "or": {"lessThan": 4}}}
 - [x] filter={"column":{"equals":true, "or": {"lessThan": 4, "isNotIn": ["d"]}}
-- [x] filter={"relationTable": {"column": {"equals":true}}} // filter on relation
-- [x] rels={"relationTable":{"\_limit":4, "\_page":1}} // limit relation array -> only for nToMany relations
+- [x] filter={"relationTable": {"column": {"equals":true}}} (filter on relation)
+- [x] rels={"relationTable":{}}
+- [x] rels={"relationTable":{"deeperRelation":{ etc... }}} (you can't call the parent relation in the child relation)
+- [x] rels={"relationTable":{"\_limit":4, "\_page":1}} (only for nToMany relations0
+- [ ] rels={"relationTable":{"\_filter": {"id": {"equals": "1"}}}} (filter in relation)
+- [x] order={"column": "desc", "column":"asc"}
 - [x] from=organization | from=user | no parameter (organization = get by organization id, get = fetch by user id, no parameter = get by organization id & user id)
 - [ ] select={"column":true"} // will become to much headache with golang to work (json fields)
 
@@ -156,11 +157,11 @@ You can create a relation by adding a column name (this should be the table name
 - [x] fix if filter does not exists sql will output: WHERE ()
 - [ ] Add select columns (normal not on relations) // will become to much headache with golang to work (json fields)
 - [ ] add enum for role
-- [ ] limit queries to relations for x role
+- [x] limit queries to relations for x role
 - [x] setup entire project
+- [ ] add filter to relation (low priority)
+- [ ] middelware is somehow called 3 times
 
 ## Custom options
 
-There is an option to add extra middleware in the auth middleware to handle role access.
-
-!! There is 1 slight problem, because we can fetch relations by query paremeter, they could access things using relations. I'm not sure how to fix this yet.
+There is an option to add extra middleware in the auth middleware to handle role access. This will be generated automatically if you turn on `SetupProject`.
