@@ -159,18 +159,6 @@ You can create a relation by adding a column name (this should be the table name
 - [ ] limit queries to relations for x role
 - [x] setup entire project
 
-### Steps for setting up an api:
-
-1. go get github.com/gin-gonic/gin
-2. go get github.com/volatiletech/sqlboiler/v4
-3. go get gopkg.in/validator.v2
-4. go get github.com/volatiletech/null/v8
-5. go get github.com/gin-contrib/cors
-6. go get github.com/lib/pq
-7. go get github.com/joho/godotenv
-8. go get github.com/dgrijalva/jwt-go
-9. go get github.com/golang-migrate/migrate/v4
-
 ## Custom options
 
 There is an option to add extra middleware in the auth middleware to handle role access.
