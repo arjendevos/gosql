@@ -28,6 +28,7 @@ func main() {
 		MigrationDir:        "database/migrations",
 		ModelOutputDir:      "models",
 		ControllerOutputDir: "generated",
+		SetupProject:        true,
 	})
 }
 ```
