@@ -2,6 +2,45 @@
 
 Current implementation is only done for postgresql, though other sql databases like mysql should be easy to implement due to simular features. REST api is build on [gin-gonic](github.com/gin-gonic/gin).
 
+## Installation
+
+1. Create a new go project (`go mod new myproject`)
+2. Create a new folder called `convert` in your project, add your `.env` file with `POSTGRESQL_URL` & add your `sqlboiler.toml` config file
+3. Create a new file called `convert.go` in your `convert` folder
+4. Copy the following code into your `convert.go` file:
+
+```
+package main
+
+import (
+	"os"
+	"strings"
+
+	"github.com/arjendevos/gosql"
+)
+
+func main() {
+	newDir, _ := os.Getwd()
+	os.Chdir(strings.TrimSuffix(newDir, "/convert"))
+
+	gosql.Convert(&gosql.GoSQLConfig{
+		SchemeDir:           "schemes",
+		MigrationDir:        "database/migrations",
+		ModelOutputDir:      "models",
+		ControllerOutputDir: "generated",
+	})
+}
+```
+
+5. Run `go mod tidy` inside the `convert` folder
+6. Create a new folder called `schemes` in your project
+7. Create a new file called `1_migration.gosql` in your `schemes` folder (you can name it whatever you want, but the number is important)
+8. Add your models into the `1_migration.gosql` file. Make sure to put `@postgresql` at the top.
+9. Run `(cd convert && go run convert.go)` in your project folder
+10. Everything should be setup now, you can run `go run main.go` to start your server
+
+!! Keep in mind that `MigrationDir` config option doesn't work with migrate yet, so keep it the same as in the example.
+
 ## Possibilities
 
 ### Models
