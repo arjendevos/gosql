@@ -8,11 +8,17 @@ import (
 )
 
 {{ range $controller := .Controllers }}
+	// We don't have a way of knowing if a relation is a one-to-one or a one-to-many, because we don't know where it is used
+	type {{ .CamelName }}RelationPagination struct {
+		PagePagination  int `json:"_page"`
+		LimitPagination int `json:"_limit"`
+	}
+
     type {{ .CamelName}}Relations struct {
         {{ range $relation := .Relations }}
-            // {{ .Name }} *Select{{ .SingularName }}Columns `boil:"{{ firstToLower .Name }}" json:"{{ firstToLower .Name}}" toml:"{{ firstToLower .Name}}" yaml:"{{ firstToLower .Name}}"`
 			{{ .Name }} *{{.SingularName}}Relations `boil:"{{ firstToLower .Name }}" json:"{{ firstToLower .Name}}" toml:"{{ firstToLower .Name}}" yaml:"{{ firstToLower .Name}}"`
         {{- end }}
+		*{{ .CamelName }}RelationPagination
     }
 
 	func parse{{ .CamelName }}Relations(relations string) (*{{ .CamelName }}Relations, error) {
@@ -34,8 +40,26 @@ import (
 				loadFrom += "."
 			}
 
-			queryMods = append(queryMods, qm.Load(loadFrom+"{{ .Name }}"))
+			{{- if .IsArray }}
+				limit := 10
+				page := 0
+				if relations.{{ .Name }}.LimitPagination > 0 {
+					limit = relations.{{ .Name }}.LimitPagination
+				}
+				if relations.{{ .Name }}.PagePagination > 0 {
+					page = relations.{{ .Name }}.PagePagination
+				}
+				
 
+				var relationQueryMods []qm.QueryMod
+				relationQueryMods = append(relationQueryMods, qm.Offset(page))
+				relationQueryMods = append(relationQueryMods, qm.Limit(limit))
+
+				queryMods = append(queryMods, qm.Load(loadFrom+"{{ .Name }}", relationQueryMods...))
+			{{- else }}
+				queryMods = append(queryMods, qm.Load(loadFrom+"{{ .Name }}"))
+			{{- end}}
+			
 			deeperQueryMods, err := parse{{.SingularName}}RelationsToMods(relations.{{ .Name }}, loadFrom +"{{.Name}}")
 			if err != nil {
 				return nil, err
@@ -44,31 +68,6 @@ import (
 			queryMods = append(queryMods, deeperQueryMods...)
 		}
 		{{- end }}
-
-		// TODO: select only the columns that are needed
-		// SQLBoiler returns entire struct even if values are null or empty
-		// I have no idea how to fix this without adding a lot of loops / converts
-		// {{ range $relation := .Relations }}
-		// 	if relations.{{ .Name }} != nil {
-		// 		var selectColumns []string
-
-		// 		{{ range $column := .Columns }}
-		// 			if relations.{{ $relation.Name }}.{{ .CamelName }} != nil {
-		// 				selectColumns = append(selectColumns, "{{.SnakeName }}")
-		// 			}
-		// 		{{- end }}
-
-		// 		if relations.{{ $relation.Name }}.SelectAll != nil && *relations.{{ $relation.Name }}.SelectAll {
-		// 			selectColumns = append(selectColumns, "*")
-		// 		}
-
-		// 		if len(selectColumns) == 0 {
-		// 			selectColumns = append(selectColumns, "*")
-		// 		}
-
-		// 		queryMods = append(queryMods, qm.Load("{{ .Name }}", qm.Select(selectColumns...)))
-		// 	}
-		// {{- end }}
 
 		return queryMods, nil
 	}

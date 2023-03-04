@@ -5,8 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/gin-gonic/gin"
 )
 
 type GoSQLConfig struct {
@@ -14,7 +12,6 @@ type GoSQLConfig struct {
 	MigrationDir        string
 	ModelOutputDir      string
 	ControllerOutputDir string
-	AuthMiddelware      func(g *gin.Context)
 }
 
 func Convert(c *GoSQLConfig) {
@@ -46,6 +43,12 @@ func Convert(c *GoSQLConfig) {
 		}
 
 		err = c.ConvertApiControllers(models)
+		if err != nil {
+			fmt.Println("ERR!", err)
+			os.Exit(1)
+		}
+
+		err = c.ConvertTypes(models)
 		if err != nil {
 			fmt.Println("ERR!", err)
 			os.Exit(1)

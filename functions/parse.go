@@ -157,6 +157,7 @@ func ParseGoSQLFile(fileName string) (string, []*Model) {
 			}
 
 			t.GoTypeName = getGotype(t.Name)
+			t.TypescriptName = getTypescriptType(t.Name)
 
 			columns = append(columns, &Column{
 				SnakeName:  camelToSnake(splittedLine[0]),
@@ -286,6 +287,27 @@ func getGotype(t string) string {
 		return "time.Time"
 	case "uint":
 		return "uint"
+	default:
+		return t
+	}
+}
+
+func getTypescriptType(t string) string {
+	switch t {
+	case "string":
+		return "string"
+	case "text":
+		return "string"
+	case "uuid":
+		return "string"
+	case "int":
+		return "number"
+	case "bool":
+		return "boolean"
+	case "dateTime":
+		return "Date"
+	case "uint":
+		return "number"
 	default:
 		return t
 	}

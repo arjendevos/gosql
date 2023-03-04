@@ -101,7 +101,7 @@ import (
 		queryMods = append(queryMods, qm.Limit(query.Limit))
 
 		if query.Filter != nil {
-			filterQueryMods, err := parse{{ .CamelName }}FilterToMods(query.Filter)
+			filterQueryMods, err := parse{{ .CamelName }}FilterToMods(query.Filter, "")
 			if err != nil {
 				return nil, err
 			}
@@ -189,14 +189,14 @@ import (
 			{{- if isAuthFieldInModel $columns .}}
 				{{- if and ($hasMultipleAuthFields) (not $isAuthUser) (not $isAuthOrganization)}}
 					if authQuery.{{ .TableCamelName }} {
-						queryMods = append(queryMods, qm.Where("{{ .SnakeName }} = ?", context.Value("{{ .SnakeName }}").({{ .GoType }})))
+						queryMods = append(queryMods, qm.Where("{{ $controller.SnakeName }}.{{ .SnakeName }} = ?", context.Value("{{ .SnakeName }}").({{ .GoType }})))
 					}
 				{{- else }}
-					queryMods = append(queryMods, qm.Where("{{ .SnakeName }} = ?", context.Value("{{ .SnakeName }}").({{ .GoType }})))
+					queryMods = append(queryMods, qm.Where("{{ $controller.SnakeName }}.{{ .SnakeName }} = ?", context.Value("{{ .SnakeName }}").({{ .GoType }})))
 				{{- end}}
 			{{- else }}
 				{{- if or (and $isAuthUser .IsFromUserTable) (and $isAuthOrganization .IsFromOrganizationTable)}}
-					queryMods = append(queryMods, qm.Where("{{ toLower .NormalName }} = ?", context.Value("{{ .SnakeName }}").({{ .GoType }})))
+					queryMods = append(queryMods, qm.Where("{{ $controller.SnakeName }}.{{ toLower .NormalName }} = ?", context.Value("{{ .SnakeName }}").({{ .GoType }})))
 				{{- end}}
 				
 			{{- end}}

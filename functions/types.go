@@ -1,7 +1,5 @@
 package functions
 
-import "github.com/gin-gonic/gin"
-
 const (
 	// body = `(?m)^\s{4}.*$`
 	atSignRegexp              = `@([a-zA-Z]+)`
@@ -43,6 +41,7 @@ type Column struct {
 type Type struct {
 	Name                   string
 	GoTypeName             string
+	TypescriptName         string
 	IsNullable             bool
 	HasDifferentCharLength bool
 	CharLength             int
@@ -60,10 +59,9 @@ type TemplateData struct {
 }
 
 type HelpersTemplateData struct {
-	PackageName         string
-	JWTFields           []*JWTField
-	HasAuth             bool
-	ExtraAuthMiddelware func(g *gin.Context)
+	PackageName string
+	JWTFields   []*JWTField
+	HasAuth     bool
 }
 
 type JWTField struct {
@@ -76,6 +74,10 @@ type JWTField struct {
 	IsFromUserTable             bool
 	IsFromOrganizationTable     bool
 	IsFromOrganizationUserTable bool
+}
+
+type TypescriptTypesTemplateData struct {
+	Controllers []*Model
 }
 
 type GeneralTemplateData struct {

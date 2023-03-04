@@ -46,7 +46,7 @@ func (c *GoSQLConfig) ConvertApiModels(models []*Model) error {
 		return err
 	}
 
-	if err := populateTemplate("templates/model_helpers.gotpl", outputDir+"/helpers.go", GeneralTemplateData{
+	if err := populateTemplate("templates/model/model_helpers.gotpl", outputDir+"/helpers.go", GeneralTemplateData{
 		PackageName: "am",
 	}); err != nil {
 		return err
@@ -77,15 +77,15 @@ func (c *GoSQLConfig) ConvertApiModels(models []*Model) error {
 				columnsWithRelationsAsIDs = append(columnsWithRelationsAsIDs, &Column{
 					SnakeName:  cl.SnakeName + "_id",
 					CamelName:  cl.CamelName + "ID",
-					Type:       &Type{Name: "int", GoTypeName: "int"},
-					Attributes: []*Attribute{},
+					Type:       &Type{Name: "int", GoTypeName: "int", IsNullable: cl.Type.IsNullable, EmptyValue: cl.Type.EmptyValue},
+					Attributes: cl.Attributes,
 					IsRelation: true,
 					Expose:     true,
 				})
 			}
 		}
 
-		if err := populateTemplate("templates/model.gotpl", outputDir+"/"+m.SnakeName+".go", ModelTemplateData{
+		if err := populateTemplate("templates/model/model.gotpl", outputDir+"/"+m.SnakeName+".go", ModelTemplateData{
 			PackageName: "am",
 			CamelName:   m.CamelName,
 			Imports:     imports,
@@ -128,20 +128,17 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 	imports = addImport(imports, moduleName+"/"+config.Output)
 	imports = addImport(imports, moduleName+"/"+c.ModelOutputDir+"/am")
 
-	if err := populateTemplate("templates/filters.gotpl", outputDir+"/generated_filters.go", GeneralTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: models}); err != nil {
+	if err := populateTemplate("templates/api/columns.gotpl", outputDir+"/generated_columns.go", GeneralTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: models}); err != nil {
 		return err
 	}
 
-	if err := populateTemplate("templates/columns.gotpl", outputDir+"/generated_columns.go", GeneralTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: models}); err != nil {
-		return err
-	}
-
-	if err := populateTemplate("templates/orders.gotpl", outputDir+"/generated_orders.go", GeneralTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: models}); err != nil {
+	if err := populateTemplate("templates/api/orders.gotpl", outputDir+"/generated_orders.go", GeneralTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: models}); err != nil {
 		return err
 	}
 
 	// Build the controllers
 	var modelWithRelations []*ModelWithRelations
+	var modelWithRelationsAsIdsInColumns []*Model
 	var createAndUpdateData []*CreateAndUpdateDataModel
 	var jwtFields []*JWTField
 	var authQueryFields []*JWTField
@@ -165,7 +162,7 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 
 		createColumns, updateColumns, mImports := getCreateAndUpdateColumns(m)
 
-		if err := populateTemplate("templates/controller.gotpl", outputDir+"/generated_"+m.SnakeName+"_controller.go", ControllerTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), CamelName: m.CamelName, Imports: imports, CreateColumns: createColumns, UpdateColumns: updateColumns, Model: m}); err != nil {
+		if err := populateTemplate("templates/api/controller.gotpl", outputDir+"/generated_"+m.SnakeName+"_controller.go", ControllerTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), CamelName: m.CamelName, Imports: imports, CreateColumns: createColumns, UpdateColumns: updateColumns, Model: m}); err != nil {
 			return err
 		}
 
@@ -178,11 +175,38 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 			Model:         m,
 		})
 
+		var columnsWithRelationsAsIDs []*Column
 		for _, c := range m.Columns {
+			if !c.IsRelation {
+				columnsWithRelationsAsIDs = append(columnsWithRelationsAsIDs, c)
+			}
+
+			if c.IsRelation {
+				columnsWithRelationsAsIDs = append(columnsWithRelationsAsIDs, &Column{
+					SnakeName:  c.SnakeName + "_id",
+					CamelName:  c.CamelName + "ID",
+					Type:       &Type{Name: "int", GoTypeName: "int", IsNullable: c.Type.IsNullable, EmptyValue: c.Type.EmptyValue},
+					Attributes: c.Attributes,
+					IsRelation: true,
+					Expose:     true,
+				})
+			}
+
 			if c.Type.IsNullable {
 				hasNullableFields = true
 			}
 		}
+
+		modelWithRelationsAsIdsInColumns = append(modelWithRelationsAsIdsInColumns, &Model{
+			SnakeName:              m.SnakeName,
+			CamelName:              m.CamelName,
+			Columns:                columnsWithRelationsAsIDs,
+			IsAuthRequired:         m.IsAuthRequired,
+			IsAuthUser:             m.IsAuthUser,
+			IsAuthOrganization:     m.IsAuthOrganization,
+			ProtectedRoutes:        m.ProtectedRoutes,
+			IsAuthOrganizationUser: m.IsAuthOrganizationUser,
+		})
 
 		if m.IsAuthUser {
 			authUser = m
@@ -298,7 +322,7 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 
 	modelImports = append(modelImports, mImports...)
 
-	if err := populateTemplate("templates/auth_controller.gotpl", outputDir+"/generated_auth_controller.go", AuthTemplateData{
+	if err := populateTemplate("templates/api/auth_controller.gotpl", outputDir+"/generated_auth_controller.go", AuthTemplateData{
 		PackageName:                   strings.ReplaceAll(c.ControllerOutputDir, "/", "_"),
 		CamelName:                     authUser.CamelName,
 		Imports:                       imports,
@@ -314,29 +338,36 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 		return err
 	}
 
-	if err := populateTemplate("templates/queries.gotpl", outputDir+"/generated_queries.go", QueryTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: models, AuthFields: authQueryFields, HasMultipleAuthFields: len(authQueryFields) > 1}); err != nil {
+	// if err := populateTemplate("templates/filters.gotpl", outputDir+"/generated_filters.go", GeneralTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: modelWithRelationsAsIdsInColumns}); err != nil {
+	// 	return err
+	// }
+	if err := populateTemplate("templates/api/filters.gotpl", outputDir+"/generated_filters.go", GeneralTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: models}); err != nil {
 		return err
 	}
 
-	if err := populateTemplate("templates/client.gotpl", outputDir+"/generated_client.go", QueryTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: models, AuthFields: authQueryFields}); err != nil {
+	if err := populateTemplate("templates/api/queries.gotpl", outputDir+"/generated_queries.go", QueryTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: models, AuthFields: authQueryFields, HasMultipleAuthFields: len(authQueryFields) > 1}); err != nil {
 		return err
 	}
 
-	if err := populateTemplate("templates/routes.gotpl", outputDir+"/generated_routes.go", RoutesTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: models, AuthFields: authQueryFields, HasOrganization: authOrganization != nil}); err != nil {
+	if err := populateTemplate("templates/api/client.gotpl", outputDir+"/generated_client.go", QueryTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: models, AuthFields: authQueryFields}); err != nil {
 		return err
 	}
 
-	if err := populateTemplate("./templates/helpers.gotpl", outputDir+"/generated_helpers.go", HelpersTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), JWTFields: jwtFields, HasAuth: authUser != nil}); err != nil {
+	if err := populateTemplate("templates/api/routes.gotpl", outputDir+"/generated_routes.go", RoutesTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: models, AuthFields: authQueryFields, HasOrganization: authOrganization != nil}); err != nil {
+		return err
+	}
+
+	if err := populateTemplate("./templates/api/helpers.gotpl", outputDir+"/generated_helpers.go", HelpersTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), JWTFields: jwtFields, HasAuth: authUser != nil}); err != nil {
 		return err
 	}
 
 	if authUser != nil {
-		if err := populateTemplate("./templates/middleware.gotpl", outputDir+"/generated_middleware.go", HelpersTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), JWTFields: jwtFields, HasAuth: authUser != nil, ExtraAuthMiddelware: c.AuthMiddelware}); err != nil {
+		if err := populateTemplate("./templates/api/middleware.gotpl", outputDir+"/generated_middleware.go", HelpersTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), JWTFields: jwtFields, HasAuth: authUser != nil}); err != nil {
 			return err
 		}
 	}
 
-	if err := populateTemplate("templates/relations.gotpl", outputDir+"/generated_relations.go", SelectTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: modelWithRelations}); err != nil {
+	if err := populateTemplate("templates/api/relations.gotpl", outputDir+"/generated_relations.go", SelectTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: modelWithRelations}); err != nil {
 		return err
 	}
 
@@ -344,7 +375,7 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 	if hasNullableFields {
 		bodieImports = addImport(bodieImports, "github.com/volatiletech/null/v8")
 	}
-	if err := populateTemplate("templates/bodies.gotpl", outputDir+"/generated_bodies.go", BodyTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: createAndUpdateData, Imports: bodieImports, AuthFields: authQueryFields}); err != nil {
+	if err := populateTemplate("templates/api/bodies.gotpl", outputDir+"/generated_bodies.go", BodyTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: createAndUpdateData, Imports: bodieImports, AuthFields: authQueryFields}); err != nil {
 		return err
 	}
 
@@ -434,7 +465,7 @@ func populateTemplate(file, output string, data interface{}) error {
 		return err
 	}
 
-	template, err := parseTemplate(&TemplateConfig{Template: string(content), Data: data})
+	template, err := parseTemplate(&TemplateConfig{Template: string(content), Data: data}, strings.HasSuffix(output, ".gotpl"))
 	if err != nil {
 		return err
 	}
@@ -467,7 +498,7 @@ type TemplateConfig struct {
 	Data     interface{}
 }
 
-func parseTemplate(c *TemplateConfig) (string, error) {
+func parseTemplate(c *TemplateConfig, shouldFormat bool) (string, error) {
 	tpl, err := template.New("").Funcs(template.FuncMap{
 		"toSnake":      camelToSnake,
 		"pluralize":    pluralize,
@@ -590,6 +621,9 @@ func parseTemplate(c *TemplateConfig) (string, error) {
 			}
 			return strings.Join(s, "&&")
 		},
+		"isRelationWithoutID": func(c *Column) bool {
+			return c.IsRelation && !strings.HasSuffix(c.SnakeName, "_id")
+		},
 	}).Parse(c.Template)
 	if err != nil {
 		return "", fmt.Errorf("parse: %v", err)
@@ -601,13 +635,17 @@ func parseTemplate(c *TemplateConfig) (string, error) {
 		return "", fmt.Errorf("execute: %v", err)
 	}
 
-	contentBytes := content.Bytes()
-	formattedContent, err := format.Source(contentBytes)
-	if err != nil {
-		return string(contentBytes), fmt.Errorf("formatting: %v", err)
+	if shouldFormat {
+		contentBytes := content.Bytes()
+		formattedContent, err := format.Source(contentBytes)
+		if err != nil {
+			return string(contentBytes), fmt.Errorf("formatting: %v", err)
+		}
+
+		return string(formattedContent), nil
 	}
 
-	return string(formattedContent), nil
+	return content.String(), nil
 }
 
 func isInJwtField(snakeName string, fs []*JWTField) bool {
