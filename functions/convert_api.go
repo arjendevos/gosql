@@ -659,7 +659,6 @@ func isInJwtField(snakeName string, fs []*JWTField) bool {
 
 func isAuthFieldInModel(cs []*Column, cl *JWTField) bool {
 	for _, c := range cs {
-		fmt.Println(c.SnakeName)
 		if c.IsRelation && strings.EqualFold(strings.TrimSuffix(c.SnakeName, "_id"), strings.TrimSuffix(cl.SnakeName, "_id")) {
 			return true
 		}

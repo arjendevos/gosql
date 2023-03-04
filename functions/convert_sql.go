@@ -19,6 +19,20 @@ func (c *GoSQLConfig) ConvertToSql(fileName, t string, models []*Model, existing
 	defer file.Close()
 
 	for _, m := range models {
+		modelCount := 0
+		for _, m2 := range existingModels {
+			if m.SnakeName == m2.SnakeName {
+				modelCount++
+			}
+			if modelCount > 1 {
+				err := os.Remove(c.MigrationDir + "/" + fileName + ".up.sql")
+				if err != nil {
+					return err
+				}
+				return fmt.Errorf("model %s is defined multiple times", m.SnakeName)
+			}
+		}
+
 		var constraints []string
 		// var relations []string
 		var indexes []string

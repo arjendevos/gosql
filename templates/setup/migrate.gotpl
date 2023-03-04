@@ -18,7 +18,7 @@ func Migrate() error {
 	fmt.Println("Migrating...")
 
 	m, err := migrate.New(
-		"file://database/migrations",
+		"file://{{ .MigrationPath }}",
 		os.Getenv("POSTGRESQL_URL"),
 	)
 	if err != nil {

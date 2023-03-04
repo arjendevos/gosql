@@ -79,9 +79,11 @@ type TypescriptTypesTemplateData struct {
 }
 
 type SetupMainTemplateData struct {
-	PackageName string
-	Imports     []string
-	FullSetup   bool
+	PackageName        string
+	Imports            []string
+	FullSetup          bool
+	MigrationPath      string
+	HasExtraMiddleWare bool
 }
 
 type GeneralTemplateData struct {

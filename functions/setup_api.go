@@ -6,6 +6,9 @@ import (
 )
 
 func (c *GoSQLConfig) SetupApi(models []*Model) error {
+	if !c.SetupProject {
+		return nil
+	}
 	projectDir, _ := os.Getwd()
 
 	modFile, err := parseModFile()
@@ -32,23 +35,14 @@ func (c *GoSQLConfig) SetupApi(models []*Model) error {
 		}
 	}
 
-	_, err2 := os.Stat(projectDir + "/database/client.go")
-	if err2 != nil {
+	if _, err := os.Stat(projectDir + "/database/client.go"); os.IsNotExist(err) {
 		if err := populateTemplate("templates/setup/database.gotpl", projectDir+"/database/client.go", SetupMainTemplateData{PackageName: "database", Imports: imports}); err != nil {
 			return err
 		}
 	}
 
-	_, err3 := os.Stat(projectDir + "/database/client.go")
-	if err3 != nil {
-		if err := populateTemplate("templates/setup/database.gotpl", projectDir+"/database/client.go", SetupMainTemplateData{PackageName: "database", Imports: imports}); err != nil {
-			return err
-		}
-	}
-
-	_, err4 := os.Stat(projectDir + "/migrate/migrate.go")
-	if err4 != nil {
-		if err := populateTemplate("templates/setup/migrate.gotpl", projectDir+"/database/migrate.go", SetupMainTemplateData{PackageName: "database", Imports: imports}); err != nil {
+	if _, err := os.Stat(projectDir + "/migrate/migrate.go"); os.IsNotExist(err) {
+		if err := populateTemplate("templates/setup/migrate.gotpl", projectDir+"/database/migrate.go", SetupMainTemplateData{PackageName: "database", Imports: imports, MigrationPath: c.MigrationDir}); err != nil {
 			return err
 		}
 	}
@@ -56,8 +50,7 @@ func (c *GoSQLConfig) SetupApi(models []*Model) error {
 	imports = append(imports, moduleName+"/database")
 
 	hasAlreadyFullSetup := false
-	_, err5 := os.Stat(projectDir + "/database/main.go")
-	if err5 != nil {
+	if _, err := os.Stat(projectDir + "/database/main.go"); os.IsNotExist(err) {
 		if err := populateTemplate("templates/setup/main.gotpl", projectDir+"/main.go", SetupMainTemplateData{PackageName: "main", Imports: imports, FullSetup: false}); err != nil {
 			return err
 		}
@@ -72,8 +65,7 @@ func (c *GoSQLConfig) SetupApi(models []*Model) error {
 	}
 
 	if hasAuthUser && hasAuthOrganization && hasAuthOrganizationUser {
-		_, err := os.Stat(projectDir + "/auth/calls.go")
-		if err != nil {
+		if _, err := os.Stat(projectDir + "/auth/calls.go"); os.IsNotExist(err) {
 			if err := os.MkdirAll("auth", os.ModePerm); err != nil {
 				return err
 			}
@@ -90,7 +82,7 @@ func (c *GoSQLConfig) SetupApi(models []*Model) error {
 	if !hasAlreadyFullSetup {
 		imports = addImport(imports, moduleName+"/"+c.ControllerOutputDir)
 
-		if err := populateTemplate("templates/setup/main.gotpl", projectDir+"/main.go", SetupMainTemplateData{PackageName: "main", Imports: imports, FullSetup: true}); err != nil {
+		if err := populateTemplate("templates/setup/main.gotpl", projectDir+"/main.go", SetupMainTemplateData{PackageName: "main", Imports: imports, FullSetup: true, HasExtraMiddleWare: hasAuthUser && hasAuthOrganization && hasAuthOrganizationUser}); err != nil {
 			return err
 		}
 	}

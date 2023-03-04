@@ -35,11 +35,9 @@ func main() {
 5. Run `go mod tidy` inside the `convert` folder
 6. Create a new folder called `schemes` in your project
 7. Create a new file called `1_migration.gosql` in your `schemes` folder (you can name it whatever you want, but the number is important)
-8. Add your models into the `1_migration.gosql` file. Make sure to put `@postgresql` at the top.
+8. Add your models into the `1_migration.gosql` file. Make sure to put `@postgresql` at the top (only needed for the first migration).
 9. Run `(cd convert && go run convert.go)` in your project folder
 10. Everything should be setup now, you can run `go run main.go` to start your server
-
-!! Keep in mind that `MigrationDir` config option doesn't work with migrate yet, so keep it the same as in the example.
 
 ## Possibilities
 
