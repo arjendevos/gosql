@@ -1,5 +1,7 @@
 package functions
 
+import "github.com/gin-gonic/gin"
+
 const (
 	// body = `(?m)^\s{4}.*$`
 	atSignRegexp              = `@([a-zA-Z]+)`
@@ -58,9 +60,10 @@ type TemplateData struct {
 }
 
 type HelpersTemplateData struct {
-	PackageName string
-	JWTFields   []*JWTField
-	HasAuth     bool
+	PackageName         string
+	JWTFields           []*JWTField
+	HasAuth             bool
+	ExtraAuthMiddelware func(g *gin.Context)
 }
 
 type JWTField struct {
@@ -85,6 +88,14 @@ type QueryTemplateData struct {
 	Controllers           []*Model
 	AuthFields            []*JWTField
 	HasMultipleAuthFields bool
+}
+
+type RoutesTemplateData struct {
+	PackageName           string
+	Controllers           []*Model
+	AuthFields            []*JWTField
+	HasMultipleAuthFields bool
+	HasOrganization       bool
 }
 
 type CreateAndUpdateDataModel struct {

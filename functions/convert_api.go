@@ -322,7 +322,7 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 		return err
 	}
 
-	if err := populateTemplate("templates/routes.gotpl", outputDir+"/generated_routes.go", QueryTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: models, AuthFields: authQueryFields}); err != nil {
+	if err := populateTemplate("templates/routes.gotpl", outputDir+"/generated_routes.go", RoutesTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: models, AuthFields: authQueryFields, HasOrganization: authOrganization != nil}); err != nil {
 		return err
 	}
 
@@ -331,7 +331,7 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 	}
 
 	if authUser != nil {
-		if err := populateTemplate("./templates/middleware.gotpl", outputDir+"/generated_middleware.go", HelpersTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), JWTFields: jwtFields, HasAuth: authUser != nil}); err != nil {
+		if err := populateTemplate("./templates/middleware.gotpl", outputDir+"/generated_middleware.go", HelpersTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), JWTFields: jwtFields, HasAuth: authUser != nil, ExtraAuthMiddelware: c.AuthMiddelware}); err != nil {
 			return err
 		}
 	}

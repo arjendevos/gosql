@@ -15,7 +15,7 @@ import (
 	"gopkg.in/validator.v2"
 )
 
-func responseWithPayload(payload interface{}, errCode, message interface{}, ok bool) gin.H {
+func ResponseWithPayload(payload interface{}, errCode, message interface{}, ok bool) gin.H {
 	var m interface{}
 	var e interface{}
 

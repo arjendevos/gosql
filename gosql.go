@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/arjendevos/gosql/functions"
+	"github.com/gin-gonic/gin"
 )
 
 type GoSQLConfig struct {
@@ -11,6 +12,7 @@ type GoSQLConfig struct {
 	MigrationDir        string
 	ModelOutputDir      string
 	ControllerOutputDir string
+	AuthMiddelware      func(g *gin.Context)
 }
 
 func Convert(c *GoSQLConfig) {
@@ -21,5 +23,6 @@ func Convert(c *GoSQLConfig) {
 		MigrationDir:        dir + "/" + c.MigrationDir,
 		ModelOutputDir:      c.ModelOutputDir,
 		ControllerOutputDir: c.ControllerOutputDir,
+		AuthMiddelware:      c.AuthMiddelware,
 	})
 }

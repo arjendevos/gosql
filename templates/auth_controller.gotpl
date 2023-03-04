@@ -31,7 +31,7 @@ type SignInBody struct {
 func (c *AuthController) SignIn(ctx *gin.Context) {
 	var body SignInBody
 	if err := bindAndValidateJSON(ctx, &body); err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "invalid_request", "Invalid request", false))
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "invalid_request", "Invalid request", false))
 		return
 	}
 
@@ -47,17 +47,17 @@ func (c *AuthController) SignIn(ctx *gin.Context) {
 
 	{{ $dbVariable }}, err := dm.{{pluralize .CamelName}}(queryMods...).One(ctx, c.db)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "invalid_request", "Invalid request", false))
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "invalid_request", "Invalid request", false))
 		return
 	}
 	if {{ $dbVariable }} == nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "incorrect_auth", "Email or password is incorrect", false))
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "incorrect_auth", "Email or password is incorrect", false))
 		return
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(account.Password), []byte(body.Password))
 	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "incorrect_auth", "Email or password is incorrect", false))
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "incorrect_auth", "Email or password is incorrect", false))
 		return
 	}
 
@@ -78,13 +78,13 @@ func (c *AuthController) SignIn(ctx *gin.Context) {
 	}
 	tokenString, err := GenerateJWT(jwtPayload)
 	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "invalid_input", "Invalid input", false))
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "invalid_input", "Invalid input", false))
 		return
 	}
 	ctx.SetSameSite(http.SameSiteLaxMode)
 	ctx.SetCookie("Authorization", tokenString, 3600*24*7, "/", os.Getenv("APP_DOMAIN"), false, true)
 
-	ctx.JSON(http.StatusOK, responseWithPayload(am.SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}({{ $dbVariable}}, nil), nil, nil, true))
+	ctx.JSON(http.StatusOK, ResponseWithPayload(am.SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}({{ $dbVariable}}, nil), nil, nil, true))
 }
 
 type SignUpBody struct {
@@ -100,23 +100,23 @@ type SignUpBody struct {
 func (c *AuthController) SignUp(ctx *gin.Context) {
 	var body SignUpBody
 	if err := bindAndValidateJSON(ctx, &body); err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "invalid_request", "Invalid request", false))
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "invalid_request", "Invalid request", false))
 		return
 	}
 
 	if err := validateObject(body.{{.CamelName}}); err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "invalid_request", "Invalid request", false))
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "invalid_request", "Invalid request", false))
 		return
 	}
 
 	{{ if and .HasOrganization .HasOrganizationUser}}
 		if err := validateObject(body.{{ .OrganizationCamelName}}.{{.OrganizationCamelName}}CreateBody); err != nil {
-			ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "invalid_request", "Invalid request", false))
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "invalid_request", "Invalid request", false))
 			return
 		}
 
 		if err := validateObject(body.{{ .OrganizationCamelName}}.{{.OrganizationUserCamelName}}CreateBodyWithoutRelations); err != nil {
-			ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "invalid_request", "Invalid request", false))
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "invalid_request", "Invalid request", false))
 			return
 		}
 	{{- end }}
@@ -226,16 +226,16 @@ func (c *AuthController) SignUp(ctx *gin.Context) {
 	})
 	if err != nil {
 		if strings.Contains(err.Error(), "already exists") {
-			ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "duplicate", err.Error(), false))
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "duplicate", err.Error(), false))
 			return
 		}
 
 		if strings.Contains(err.Error(), "Invalid request") {
-			ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "invalid_request", err.Error(), false))
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "invalid_request", err.Error(), false))
 			return
 		}
 
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "generic", err.Error(), false))
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "generic", err.Error(), false))
 		return
 	}
 
@@ -251,25 +251,25 @@ func (c *AuthController) SignUp(ctx *gin.Context) {
 
 	{{ $dbVariable }}, err := dm.{{pluralize .CamelName}}(queryMods...).One(ctx, c.db)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "invalid_request", "Invalid request", false))
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "invalid_request", "Invalid request", false))
 		return
 	}
 	if {{ $dbVariable }} == nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "incorrect_auth", "Email or password is incorrect", false))
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "incorrect_auth", "Email or password is incorrect", false))
 		return
 	}
 
 	ctx.SetSameSite(http.SameSiteLaxMode)
 	ctx.SetCookie("Authorization", tokenString, 3600*24*7, "/", os.Getenv("APP_DOMAIN"), false, true)
 
-	ctx.JSON(http.StatusOK, responseWithPayload(am.SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}({{ $dbVariable }}, nil), nil, nil, true))
+	ctx.JSON(http.StatusOK, ResponseWithPayload(am.SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}({{ $dbVariable }}, nil), nil, nil, true))
 }
 
 func (c *AuthController) SignOut(ctx *gin.Context) {
 	ctx.SetSameSite(http.SameSiteLaxMode)
 	ctx.SetCookie("Authorization", "", -1, "/", os.Getenv("APP_DOMAIN"), false, true)
 
-	ctx.JSON(http.StatusOK, responseWithPayload(nil,nil, nil, true))
+	ctx.JSON(http.StatusOK, ResponseWithPayload(nil,nil, nil, true))
 }
 
 func (c *AuthController) Me(ctx *gin.Context) {
@@ -290,9 +290,60 @@ func (c *AuthController) Me(ctx *gin.Context) {
 
 	payload, err := dm.{{pluralize .CamelName}}( queryMods...).One(ctx, c.db)
 	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, responseWithPayload(nil, "generic", "Something went wrong", false))
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "generic", "Something went wrong", false))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, responseWithPayload(am.SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}(payload, nil), nil, nil, true))
+	ctx.JSON(http.StatusOK, ResponseWithPayload(am.SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}(payload, nil), nil, nil, true))
 }
+
+{{ if and .HasOrganization .HasOrganizationUser}}
+	func (c *AuthController) SwitchOrganization(ctx *gin.Context) {
+		var body struct {
+			OrganizationID int `json:"organization_id" validate:"nonzero"`
+		}
+		if err := bindAndValidateJSON(ctx, &body); err != nil {
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "invalid_request", "Invalid request", false))
+			return
+		}
+
+		var queryMods []qm.QueryMod
+		queryMods = append(queryMods, qm.Where("{{ toLower .CamelName }}_id = ?", ctx.Value("{{ toLower .CamelName }}_id").(int)))
+		queryMods = append(queryMods, qm.Where("{{ toLower .OrganizationCamelName }}_id = ?", body.OrganizationID))
+
+		queryMods = append(queryMods, qm.Load("{{ .OrganizationCamelName }}"))
+
+		{{ $dbVariable := firstToLower .OrganizationUserCamelName}}
+		{{ $dbVariable }}, err := dm.{{pluralize .OrganizationUserCamelName}}(queryMods...).One(ctx, c.db)
+		if err != nil {
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "invalid_request", "Invalid request", false))
+			return
+		}
+		if {{ $dbVariable }} == nil || {{ $dbVariable }}.R == nil || {{$dbVariable}}.R.{{ .OrganizationCamelName}} == nil {
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "invalid_request", "We can't find that {{ firstToLower .OrganizationCamelName }}", false))
+			return
+		}
+
+		jwtPayload := &JWTPayload{
+			{{- range $jwt := .JWTFields }}
+				{{- if .IsFromUserTable }}
+					{{ .CamelName }}: ctx.Value("{{ .SnakeName }}").({{ .GoType}}),
+				{{- else if .IsFromOrganizationTable }}
+					{{ .CamelName }}: {{$dbVariable}}.R.{{ $organizationCamelName}}.{{ .NormalName }},
+				{{- else if .IsFromOrganizationUserTable }}
+					{{ .CamelName }}: {{ $dbVariable }}.{{.NormalName}},
+				{{- end}}
+			{{- end }}
+		}
+		tokenString, err := GenerateJWT(jwtPayload)
+		if err != nil {
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "invalid_request", "Invalid request", false))
+			return
+		}
+
+		ctx.SetSameSite(http.SameSiteLaxMode)
+		ctx.SetCookie("Authorization", tokenString, 3600*24*7, "/", os.Getenv("APP_DOMAIN"), false, true)
+
+		ctx.JSON(http.StatusOK, ResponseWithPayload(nil, nil, nil, true))
+	}
+{{- end}}

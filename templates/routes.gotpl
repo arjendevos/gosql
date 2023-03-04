@@ -40,6 +40,9 @@ func RunApi(db *sql.DB, c *ApiConfig) {
         router.POST("/auth/signup", controllers.Auth.SignUp)
         router.POST("/auth/signout", controllers.Auth.SignOut)
         router.Use(AuthMiddleware()).GET("/auth/me", controllers.Auth.Me)
+        {{- if .HasOrganization }}
+            router.Use(AuthMiddleware()).POST("/auth/switch", controllers.Auth.SwitchOrganization)
+        {{- end}}
     {{- end}}
 
     
