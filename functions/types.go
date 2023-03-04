@@ -11,8 +11,6 @@ const (
 	attributeWithValueRegexp2 = `^@([a-zA-Z]+)\(([\s\S]+)\)`
 )
 
-//
-
 type Model struct {
 	SnakeName              string
 	CamelName              string
@@ -78,6 +76,12 @@ type JWTField struct {
 
 type TypescriptTypesTemplateData struct {
 	Controllers []*Model
+}
+
+type SetupMainTemplateData struct {
+	PackageName string
+	Imports     []string
+	FullSetup   bool
 }
 
 type GeneralTemplateData struct {

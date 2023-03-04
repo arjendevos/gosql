@@ -6,20 +6,13 @@ import (
 	"strings"
 )
 
-func (c *GoSQLConfig) ConvertToSql(fileName, t string, models []*Model) error {
+func (c *GoSQLConfig) ConvertToSql(fileName, t string, models []*Model, existingModels []*Model) error {
 	if t != "postgresql" {
 		return fmt.Errorf("sql type %s not supported", t)
 	}
 	fileName = strings.TrimSuffix(fileName, ".gosql")
 
-	if err := os.RemoveAll(c.MigrationDir); err != nil {
-		return err
-	}
-	if err := os.MkdirAll(c.MigrationDir, os.ModePerm); err != nil {
-		return err
-	}
-
-	file, err := os.Create(c.MigrationDir + "/" + fileName + ".sql")
+	file, err := os.Create(c.MigrationDir + "/" + fileName + ".up.sql")
 	if err != nil {
 		return err
 	}
@@ -60,7 +53,7 @@ func (c *GoSQLConfig) ConvertToSql(fileName, t string, models []*Model) error {
 				// Check if exists in models
 				var exists bool
 				var relationType string
-				for _, m := range models {
+				for _, m := range existingModels {
 					if strings.EqualFold(m.SnakeName, t) {
 						exists = true
 						for _, co := range m.Columns {

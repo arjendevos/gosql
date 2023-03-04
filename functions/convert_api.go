@@ -338,9 +338,6 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 		return err
 	}
 
-	// if err := populateTemplate("templates/filters.gotpl", outputDir+"/generated_filters.go", GeneralTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: modelWithRelationsAsIdsInColumns}); err != nil {
-	// 	return err
-	// }
 	if err := populateTemplate("templates/api/filters.gotpl", outputDir+"/generated_filters.go", GeneralTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: models}); err != nil {
 		return err
 	}
@@ -465,7 +462,7 @@ func populateTemplate(file, output string, data interface{}) error {
 		return err
 	}
 
-	template, err := parseTemplate(&TemplateConfig{Template: string(content), Data: data}, strings.HasSuffix(output, ".gotpl"))
+	template, err := parseTemplate(&TemplateConfig{Template: string(content), Data: data}, strings.HasSuffix(output, ".go"))
 	if err != nil {
 		return err
 	}
@@ -550,13 +547,15 @@ func parseTemplate(c *TemplateConfig, shouldFormat bool) (string, error) {
 
 			return ""
 		},
-		"isAuthFieldInModel": func(cs []*Column, cl *JWTField) bool {
-			for _, c := range cs {
-				if c.IsRelation && strings.EqualFold(c.SnakeName, strings.TrimSuffix(cl.SnakeName, "_id")) {
-					return true
+		"isAuthFieldInModel": isAuthFieldInModel,
+		"areAuthFieldsInModel": func(cs []*Column, cl []*JWTField) bool {
+			isInModel := false
+			for _, c := range cl {
+				if isAuthFieldInModel(cs, c) {
+					isInModel = true
 				}
 			}
-			return false
+			return isInModel
 		},
 		"isUnique": func(c *Column) bool {
 			for _, attr := range c.Attributes {
@@ -655,6 +654,16 @@ func isInJwtField(snakeName string, fs []*JWTField) bool {
 		}
 	}
 
+	return false
+}
+
+func isAuthFieldInModel(cs []*Column, cl *JWTField) bool {
+	for _, c := range cs {
+		fmt.Println(c.SnakeName)
+		if c.IsRelation && strings.EqualFold(strings.TrimSuffix(c.SnakeName, "_id"), strings.TrimSuffix(cl.SnakeName, "_id")) {
+			return true
+		}
+	}
 	return false
 }
 

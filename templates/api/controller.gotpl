@@ -82,14 +82,7 @@ func (c *{{ .CamelName}}Controller) Create(ctx *gin.Context) {
 	}
 
 	var queryMods []qm.QueryMod
-	// {{ if isProtected .ProtectedRoutes "CREATE" }}
-	// 	authQueryMods, err := parse{{ .CamelName }}AuthToMods(ctx)
-	// 	if err != nil {
-	// 		ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "invalid_request", "Invalid request", false))
-	// 		return
-	// 	}
-	// 	queryMods = append(queryMods, authQueryMods...)
-	// {{- end}}
+	// We don't use the authQueryMods here because we do that in CreateBody
 
 	{{- $controller := .}}
 	{{- $controllerCamelName := .CamelName}}

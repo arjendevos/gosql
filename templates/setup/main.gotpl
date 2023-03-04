@@ -1,0 +1,59 @@
+package {{ .PackageName}}
+
+import (
+    "flag"
+	"fmt"
+	"math/rand"
+	"os"
+	"time"
+
+	"github.com/joho/godotenv"
+
+   	{{ if .FullSetup}}
+		"github.com/gin-gonic/gin"
+		"github.com/volatiletech/sqlboiler/v4/boil"
+	{{- end}}
+
+    {{- range .Imports }}
+    "{{ . }}"
+    {{- end }}
+)
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+	godotenv.Load()
+}
+
+func main() {
+    migrateFlag := flag.Bool("migrate", false, "Run database migrations")
+	flag.Parse()
+
+	if *migrateFlag {
+		err := database.Migrate()
+		if err != nil {
+			fmt.Println("ERR", err)
+			os.Exit(1)
+		}
+		return
+	}
+
+	{{ if .FullSetup }}
+		boil.DebugMode = os.Getenv("GIN_MODE") == "debug"
+
+		db, err := database.NewClient()
+		if err != nil {
+			panic(err)
+		}
+
+		generated.RunApi(db, &generated.ApiConfig{
+			AllowOrigins:        []string{"*"},
+			ExtraAuthMiddleware: auth.CallMiddleware,
+			CustomRoutes: func(router *gin.Engine) *gin.Engine {
+				router.GET("/test", func(c *gin.Context) {
+					c.JSON(200, gin.H{"message": "test"})
+				})
+				return router
+			},
+		})
+	{{- end}}
+}

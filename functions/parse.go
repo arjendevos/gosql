@@ -9,8 +9,7 @@ import (
 	"unicode"
 )
 
-func ParseGoSQLFile(fileName string) (string, []*Model) {
-	var sqlType string
+func ParseGoSQLFile(fileName string, sqlType string) (string, []*Model) {
 	var models []*Model
 
 	fileName = strings.TrimSuffix(fileName, ".gosql")
@@ -33,8 +32,13 @@ func ParseGoSQLFile(fileName string) (string, []*Model) {
 	str := string(dat)
 
 	sqlTypeCompiled := regexp.MustCompile(atSignRegexp)
-	sqlTypeMatch := sqlTypeCompiled.FindString(str)
-	sqlType = sqlTypeMatch[1:]
+	sqlTypeMatch := sqlTypeCompiled.FindString(strings.Split(str, "\n")[0])
+	if len(sqlTypeMatch) <= 1 && sqlType == "" {
+		panic("Invalid sql type")
+	}
+	if sqlType == "" {
+		sqlType = sqlTypeMatch[1:]
+	}
 
 	re := regexp.MustCompile(modelRegexp3)
 	match := re.FindAllStringSubmatch(str, -1)
@@ -45,7 +49,8 @@ func ParseGoSQLFile(fileName string) (string, []*Model) {
 
 	for _, m := range match {
 		extraAttributeLine := m[3]
-		if len(match) <= 1 {
+
+		if len(m) <= 1 {
 			panic("Invalid model definition")
 		}
 

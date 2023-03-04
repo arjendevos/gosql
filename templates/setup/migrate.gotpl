@@ -1,0 +1,56 @@
+package {{ .PackageName }}
+
+import (
+	"bytes"
+	"fmt"
+	"os"
+	"os/exec"
+
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
+)
+
+// HOW TO WRITE A MIGRATION
+// https://github.com/golang-migrate/migrate/blob/master/MIGRATIONS.md
+func Migrate() error {
+	os.Setenv("DATABASE_MULTIPLE_STATEMENTS", "true")
+	fmt.Println("Migrating...")
+
+	m, err := migrate.New(
+		"file://database/migrations",
+		os.Getenv("POSTGRESQL_URL"),
+	)
+	if err != nil {
+		return err
+	}
+	
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		return err
+	}
+
+	fmt.Println("Done migrating!")
+	fmt.Println("Running sqlboiler...")
+
+	if err := runSqlBoiler(); err != nil {
+		return err
+	}
+
+	fmt.Println("Done running sqlboiler!")
+
+	return nil
+}
+
+func runSqlBoiler() error {
+	var stdout bytes.Buffer
+
+	cmd := exec.Command("sqlboiler", []string{"psql", "--wipe", "--no-tests"}...)
+	cmd.Stdout = &stdout
+
+	err := cmd.Run()
+	if err != nil {
+		return fmt.Errorf(stdout.String())
+	}
+
+	return nil
+}

@@ -12,6 +12,8 @@ import (
 {{ $hasMultipleAuthFields := .HasMultipleAuthFields }}
 
 {{ range $controller := .Controllers }}
+	{{ $columns := .Columns }}
+
 	type {{ .CamelName }}Query struct {
 		Relations *{{ .CamelName }}Relations `json:"relations"`
 	}
@@ -142,7 +144,9 @@ import (
 	{{ if $hasMultipleAuthFields }} 
 		type {{ .CamelName }}AuthQuery struct {
 			{{ range $auth := $authFields }}
-				{{ .TableCamelName }} bool `json:"{{ .TableSnakeName }}"`
+				{{- if isAuthFieldInModel $columns .}}
+					{{ .TableCamelName }} bool `json:"{{ .TableSnakeName }}"`
+				{{- end }}
 			{{- end }}
 		}
 
@@ -150,30 +154,38 @@ import (
 			from := context.DefaultQuery("from", "all")
 
 			{{ range $auth := $authFields }}
-				from{{ .TableCamelName }} := false
+				{{- if isAuthFieldInModel $columns .}}
+					from{{ .TableCamelName }} := false
+				{{- end }}
 			{{- end}}
 
 			switch from {
 				{{- range $auth := $authFields }}
-					case "{{ .TableSnakeName }}":
-						from{{ .TableCamelName }} = true
+					{{- if isAuthFieldInModel $columns .}}
+						case "{{ .TableSnakeName }}":
+							from{{ .TableCamelName }} = true
+					{{- end }}
 				{{- end }}
 				default:
 					{{- range $auth := $authFields }}
-						from{{ .TableCamelName }} = true
+						{{- if isAuthFieldInModel $columns .}}
+							from{{ .TableCamelName }} = true
+						{{- end}}
 					{{- end }}
 			}
 
 			return &{{.CamelName}}AuthQuery{
 				{{- range $auth := $authFields }}
-					{{ .TableCamelName }}: from{{ .TableCamelName }},
+					{{- if isAuthFieldInModel $columns .}}
+						{{ .TableCamelName }}: from{{ .TableCamelName }},
+					{{- end}}
 				{{- end }}
 			}, nil
 		}
 	{{- end }}
 
 	func parse{{ .CamelName }}AuthToMods(context *gin.Context) ([]qm.QueryMod, error) {
-		{{- if and ($hasMultipleAuthFields) (not .IsAuthUser) (not .IsAuthOrganization)}}
+		{{- if and (areAuthFieldsInModel .Columns $authFields) ($hasMultipleAuthFields) (not .IsAuthUser) (not .IsAuthOrganization)}}
 			authQuery, err := parse{{ .CamelName }}AuthQuery(context)
 			if err != nil {
 				return nil, err
@@ -184,7 +196,6 @@ import (
 		{{ $isAuthUser := .IsAuthUser}}
 		{{ $isAuthOrganization := .IsAuthOrganization}}
 
-		{{ $columns := .Columns }}
 		{{ range $auth := $authFields }}
 			{{- if isAuthFieldInModel $columns .}}
 				{{- if and ($hasMultipleAuthFields) (not $isAuthUser) (not $isAuthOrganization)}}

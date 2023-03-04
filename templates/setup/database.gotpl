@@ -1,0 +1,23 @@
+package {{.PackageName}}
+
+import (
+	"database/sql"
+	"os"
+
+	_ "github.com/lib/pq"
+)
+
+func NewClient() (*sql.DB, error) {
+	postgresqlUrl := os.Getenv("POSTGRESQL_URL")
+	db, err := sql.Open("postgres", postgresqlUrl)
+	if err != nil {
+		return nil, err
+	}
+
+	// err = seed(db)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	return db, nil
+}

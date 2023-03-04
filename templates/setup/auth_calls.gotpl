@@ -1,0 +1,72 @@
+package {{ .PackageName}}
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/gin-gonic/gin"
+
+    {{- range .Imports }}
+    "{{ . }}"
+    {{- end }}
+)
+
+var authCalls = map[string]map[string]bool{
+	"all": {},
+}
+
+func CallMiddleware(c *gin.Context) {
+	role := c.Value("role")
+
+	method := strings.ToUpper(c.Request.Method)
+	path := strings.TrimSuffix(strings.TrimPrefix(strings.ToLower(c.Request.URL.Path), "/"), "/")
+	pathSplitted := strings.Split(path, "/")
+
+	var methodCall string
+
+	switch method {
+	case "GET":
+		methodCall = "list"
+		if contains(c.Params, "id") {
+			methodCall = "byid"
+			pathSplitted = pathSplitted[:len(pathSplitted)-1]
+		}
+	case "POST":
+		methodCall = "create"
+		if contains(c.Params, "id") {
+			pathSplitted = pathSplitted[:len(pathSplitted)-1]
+		}
+	case "PATCH":
+		methodCall = "update"
+		if contains(c.Params, "id") {
+			pathSplitted = pathSplitted[:len(pathSplitted)-1]
+		}
+	case "DELETE":
+		methodCall = "delete"
+		if contains(c.Params, "id") {
+			pathSplitted = pathSplitted[:len(pathSplitted)-1]
+		}
+	}
+
+	call := fmt.Sprintf("%s.%s", strings.Join(pathSplitted, "."), methodCall)
+
+	if !authCalls[role.(string)][call] && !authCalls["all"][call] {
+		fmt.Println("Call not allowed:")
+		fmt.Println()
+		fmt.Println("    ", call)
+		fmt.Println()
+		c.AbortWithStatusJSON(401, generated.ResponseWithPayload(nil, "unauthorized", "You are unauthorized", false))
+		return
+	}
+
+	c.Next()
+}
+
+func contains(strSlice []gin.Param, str string) bool {
+	for _, s := range strSlice {
+		if s.Key == str {
+			return true
+		}
+	}
+	return false
+}

@@ -102,9 +102,9 @@ You can create a relation by adding a column name (this should be the table name
 - [x] Add rest of the endpoints with bodies etc
 - [ ] Test all endpoints
 - [x] Add or possibility in filter
-- [ ] Export to typescript types
-- [ ] Generate postgresql database setup files (client & migrations)
-- [ ] Auto install deps
+- [x] Export to typescript types
+- [x] Generate postgresql database setup files (client & migrations)
+- [x] Auto install deps
 - [x] Add authorization on User & Organization
 - [x] User authentication
 - [x] fetch items based on user_id or organization_id
@@ -117,6 +117,9 @@ You can create a relation by adding a column name (this should be the table name
 - [x] filter in relations in filter
 - [x] fix if filter does not exists sql will output: WHERE ()
 - [ ] Add select columns (normal not on relations) // will become to much headache with golang to work (json fields)
+- [ ] add enum for role
+- [ ] limit queries to relations for x role
+- [x] setup entire project
 
 ### Steps for setting up an api:
 
@@ -128,79 +131,10 @@ You can create a relation by adding a column name (this should be the table name
 6. go get github.com/lib/pq
 7. go get github.com/joho/godotenv
 8. go get github.com/dgrijalva/jwt-go
+9. go get github.com/golang-migrate/migrate/v4
 
 ## Custom options
 
-There is an option to add extra middleware in the auth middleware to handle role access. For example:
+There is an option to add extra middleware in the auth middleware to handle role access.
 
 !! There is 1 slight problem, because we can fetch relations by query paremeter, they could access things using relations. I'm not sure how to fix this yet.
-
-```
-var authCalls = map[string]map[string]bool{
-	"admin": {
-		"organization.byid":   true,
-		"organization.list":   true,
-		"organization.create": true,
-		"organization.update": true,
-		"organization.delete": true,
-		"page.byid":           true,
-		"page.list":           true,
-	},
-}
-
-func CallMiddleware(c *gin.Context) {
-	role := c.Value("role")
-
-	method := strings.ToUpper(c.Request.Method)
-	path := strings.TrimSuffix(strings.TrimPrefix(strings.ToLower(c.Request.URL.Path), "/"), "/")
-	pathSplitted := strings.Split(path, "/")
-
-	var methodCall string
-
-	switch method {
-	case "GET":
-		methodCall = "list"
-		if contains(c.Params, "id") {
-			methodCall = "byid"
-			pathSplitted = pathSplitted[:len(pathSplitted)-1]
-		}
-	case "POST":
-		methodCall = "create"
-		if contains(c.Params, "id") {
-			pathSplitted = pathSplitted[:len(pathSplitted)-1]
-		}
-	case "PATCH":
-		methodCall = "update"
-		if contains(c.Params, "id") {
-			pathSplitted = pathSplitted[:len(pathSplitted)-1]
-		}
-	case "DELETE":
-		methodCall = "delete"
-		if contains(c.Params, "id") {
-			pathSplitted = pathSplitted[:len(pathSplitted)-1]
-		}
-	}
-
-	call := fmt.Sprintf("%s.%s", strings.Join(pathSplitted, "."), methodCall)
-
-	if !authCalls[role.(string)][call] {
-		fmt.Println("Call not allowed:")
-		fmt.Println()
-		fmt.Println("    ", call)
-		fmt.Println()
-		c.AbortWithStatusJSON(401, generated.ResponseWithPayload(nil, "unauthorized", "You are unauthorized", false))
-		return
-	}
-
-	c.Next()
-}
-
-func contains(strSlice []gin.Param, str string) bool {
-	for _, s := range strSlice {
-		if s.Key == str {
-			return true
-		}
-	}
-	return false
-}
-```
