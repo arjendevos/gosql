@@ -126,7 +126,7 @@ You can create a relation by adding a column name (this should be the table name
 - [ ] rels={"relationTable":{"\_filter": {"id": {"equals": "1"}}}} (filter in relation)
 - [x] order={"column": "desc", "column":"asc"}
 - [x] from=organization | from=user | no parameter (organization = get by organization id, get = fetch by user id, no parameter = get by organization id & user id)
-- [ ] select={"column":true"} // will become to much headache with golang to work (json fields)
+- [ ] select={"column":true"} (will become to much headache with golang to work (json fields))
 
 ### IDs
 
@@ -139,7 +139,6 @@ You can create a relation by adding a column name (this should be the table name
 
 - [x] Add order by possibility
 - [x] Add rest of the endpoints with bodies etc
-- [ ] Test all endpoints
 - [x] Add or possibility in filter
 - [x] Export to typescript types
 - [x] Generate postgresql database setup files (client & migrations)
@@ -155,12 +154,13 @@ You can create a relation by adding a column name (this should be the table name
 - [x] can filter on if null
 - [x] filter in relations in filter
 - [x] fix if filter does not exists sql will output: WHERE ()
-- [ ] Add select columns (normal not on relations) // will become to much headache with golang to work (json fields)
-- [ ] add enum for role
 - [x] limit queries to relations for x role
 - [x] setup entire project
+- [ ] Test all endpoints (high priority)
+- [ ] middelware is somehow called 3 times (high priority)
+- [ ] add enum for role (low priority)
 - [ ] add filter to relation (low priority)
-- [ ] middelware is somehow called 3 times
+- [ ] Add select columns (normal not on relations) (low priority)
 
 ## Custom options
 
