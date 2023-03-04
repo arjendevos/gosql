@@ -118,7 +118,7 @@ You can create a relation by adding a column name (this should be the table name
 - [x] page=4
 - [x] filter={"column": {"equals":"true"}}
 - [x] rels={"relationTable":{}}
-- [x] rels={"relationTable":{"deeperRelation":{ etc... }}}
+- [x] rels={"relationTable":{"deeperRelation":{ etc... }}} (you can't call the parent relation in the child relation)
 - [x] order={"column": "desc", "column":"asc"}
 - [x] filter={"column":{"equals":true, "or": {"lessThan": 4}}}
 - [x] filter={"column":{"equals":true, "or": {"lessThan": 4, "isNotIn": ["d"]}}

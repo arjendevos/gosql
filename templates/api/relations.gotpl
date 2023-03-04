@@ -43,11 +43,13 @@ import (
 			{{- if .IsArray }}
 				limit := 10
 				page := 0
-				if relations.{{ .Name }}.LimitPagination > 0 {
-					limit = relations.{{ .Name }}.LimitPagination
-				}
-				if relations.{{ .Name }}.PagePagination > 0 {
-					page = relations.{{ .Name }}.PagePagination
+				if relations.{{ .Name }}.{{ .SingularName }}RelationPagination != nil {
+					if relations.{{ .Name }}.LimitPagination > 0 {
+						limit = relations.{{ .Name }}.LimitPagination
+					}
+					if relations.{{ .Name }}.PagePagination > 0 {
+						page = relations.{{ .Name }}.PagePagination
+					}
 				}
 				
 
