@@ -16,18 +16,26 @@ import (
 
 	type {{ .CamelName }}Query struct {
 		Relations *{{ .CamelName }}Relations `json:"relations"`
+		SelectColumns []string `json:"select_columns"`
 	}
 
 	func parse{{ .CamelName }}Query(context *gin.Context) (*{{ .CamelName }}Query, error) {
 		relations := context.DefaultQuery("rels", "{}")
-
+		selects := context.DefaultQuery("select", "[]")
+		
 		r, err := parse{{ .CamelName }}Relations(relations)
+		if err != nil {
+			return nil, err
+		}
+
+		s, err := parse{{ .CamelName }}Selects(selects)
 		if err != nil {
 			return nil, err
 		}
 
 		return &{{ .CamelName }}Query{
 			Relations: r,
+			SelectColumns: s,
 		}, nil
 	}
 
@@ -45,6 +53,14 @@ import (
 				return nil, err
 			}
 			queryMods = append(queryMods, relationQueryMods...)
+		}
+
+		if len(query.SelectColumns) > 0 {
+			selectQueryMods, err := parse{{ .CamelName }}SelectsToMods(query.SelectColumns)
+			if err != nil {
+				return nil, err
+			}
+			queryMods = append(queryMods, selectQueryMods)
 		}
 
 		return queryMods, nil

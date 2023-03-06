@@ -2,7 +2,6 @@
 package {{ .PackageName }}
 
 import (
-	"fmt"
 	"encoding/json"
 
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
@@ -38,8 +37,6 @@ import (
 				}
 			}
 		{{- end }}
-
-		fmt.Println(queryMods)
 
 		return queryMods, nil
 	}

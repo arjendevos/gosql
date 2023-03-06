@@ -12,7 +12,7 @@ type {{ .CamelName }} struct {
     {{- end }}
 
     {{ range $relation := .Relations }}
-        {{ .Name }} {{ .Type }} `boil:"{{ toSnake .Name }}" json:"{{ toSnake .Name }}, omitempty" toml:"{{ toSnake .Name }}" yaml:"{{ toSnake .Name }}"`
+        {{ .Name }} {{ .Type }} `boil:"{{ toSnake .Name }}" json:"{{ toSnake .Name }},omitempty" toml:"{{ toSnake .Name }}" yaml:"{{ toSnake .Name }}"`
     {{- end }}
 }
 

@@ -14,11 +14,13 @@ import (
 		LimitPagination int `json:"_limit"`
 	}
 
+
     type {{ .CamelName}}Relations struct {
         {{ range $relation := .Relations }}
 			{{ .Name }} *{{.SingularName}}Relations `boil:"{{ firstToLower .Name }}" json:"{{ firstToLower .Name}}" toml:"{{ firstToLower .Name}}" yaml:"{{ firstToLower .Name}}"`
         {{- end }}
 		*{{ .CamelName }}RelationPagination
+		SelectColumns *string `json:"_select"`
     }
 
 	func parse{{ .CamelName }}Relations(relations string) (*{{ .CamelName }}Relations, error) {
@@ -51,12 +53,24 @@ import (
 						page = relations.{{ .Name }}.PagePagination
 					}
 				}
-				
 
 				var relationQueryMods []qm.QueryMod
 				relationQueryMods = append(relationQueryMods, qm.Offset(page))
 				relationQueryMods = append(relationQueryMods, qm.Limit(limit))
 
+				if relations.{{.Name}}.SelectColumns != nil {
+					parsedMods, err := parse{{.SingularName}}Selects(*relations.{{.Name}}.SelectColumns)
+					if err != nil {
+						return nil, err
+					}
+	
+					selectMods, err := parse{{.SingularName}}SelectsToMods(parsedMods)
+					if err != nil {
+						return nil, err
+					}
+					relationQueryMods = append(relationQueryMods, selectMods)
+				}
+				
 				queryMods = append(queryMods, qm.Load(loadFrom+"{{ .Name }}", relationQueryMods...))
 			{{- else }}
 				queryMods = append(queryMods, qm.Load(loadFrom+"{{ .Name }}"))

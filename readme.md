@@ -123,10 +123,14 @@ You can create a relation by adding a column name (this should be the table name
 - [x] rels={"relationTable":{}}
 - [x] rels={"relationTable":{"deeperRelation":{ etc... }}} (you can't call the parent relation in the child relation)
 - [x] rels={"relationTable":{"\_limit":4, "\_page":1}} (only for nToMany relations0
-- [ ] rels={"relationTable":{"\_filter": {"id": {"equals": "1"}}}} (filter in relation)
 - [x] order={"column": "desc", "column":"asc"}
 - [x] from=organization | from=user | no parameter (organization = get by organization id, get = fetch by user id, no parameter = get by organization id & user id)
-- [ ] select={"column":true"} (omitempty fixes this on the json side)
+- [x] select=["column"] (omitempty fixes this on the json side)
+- [ ] optimize select relation `&select=["id", "account"]`, if account is not in the select array, don't get relation from db
+- [ ] select relation columns. Either in the select query or in the rels query.
+
+select=["relation1": ["column1"], "relation2":[]]
+or rels={"relation1":{"\_select":["column1"]}}
 
 ### IDs
 
@@ -157,9 +161,9 @@ You can create a relation by adding a column name (this should be the table name
 - [x] limit queries to relations for x role
 - [x] setup entire project
 - [ ] Test all endpoints (high priority)
-- [ ] middelware is somehow called 3 times (high priority)
+- [x] middelware is somehow called 3 times (high priority)
 - [ ] add enum for role (low priority)
-- [ ] add filter to relation (low priority)
+- ~~ [ ] add filter to relation (low priority)~~
 - [ ] Add select columns (normal not on relations) (low priority)
 
 ## Custom options

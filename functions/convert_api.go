@@ -368,6 +368,10 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 		return err
 	}
 
+	if err := populateTemplate("templates/api/select.gotpl", outputDir+"/generated_select.go", SelectTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: modelWithRelations}); err != nil {
+		return err
+	}
+
 	bodieImports := modelImports
 	if hasNullableFields {
 		bodieImports = addImport(bodieImports, "github.com/volatiletech/null/v8")

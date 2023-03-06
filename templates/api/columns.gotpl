@@ -4,7 +4,7 @@ package {{ .PackageName}}
 {{ range $controller := .Controllers }}
    type {{ .CamelName }}Columns struct {
 		{{ range $column := .Columns }}
-			{{ .CamelName }} *string `json:"{{ firstToLower .CamelName }}"`	
+			{{ .CamelName }} *string `json:"{{ .SnakeName }}"`	
 		{{- end }}
 	}
 {{ end }}
