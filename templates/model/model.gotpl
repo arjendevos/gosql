@@ -8,11 +8,11 @@ import (
 
 type {{ .CamelName }} struct {
     {{- range $column := .Columns }}
-        {{ .CamelName }} {{ .Type.GoTypeName }} `boil:"{{ .SnakeName }}" json:"{{ if .Expose }}{{ .SnakeName }}{{- else}}-{{- end}}" toml:"{{ .SnakeName }}" yaml:"{{  .SnakeName }}"`
+        {{ .CamelName }} {{ .Type.GoTypeName }} `boil:"{{ .SnakeName }}" json:"{{ if .Expose }}{{ .SnakeName }},omitempty{{- else}}-{{- end}}" toml:"{{ .SnakeName }}" yaml:"{{  .SnakeName }}"`
     {{- end }}
 
     {{ range $relation := .Relations }}
-        {{ .Name }} {{ .Type }} `boil:"{{ toSnake .Name }}" json:"{{ toSnake .Name }}" toml:"{{ toSnake .Name }}" yaml:"{{ toSnake .Name }}"`
+        {{ .Name }} {{ .Type }} `boil:"{{ toSnake .Name }}" json:"{{ toSnake .Name }}, omitempty" toml:"{{ toSnake .Name }}" yaml:"{{ toSnake .Name }}"`
     {{- end }}
 }
 
