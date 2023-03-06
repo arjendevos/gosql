@@ -131,6 +131,7 @@ You can create a relation by adding a column name (this should be the table name
 
 select=["relation1": ["column1"], "relation2":[]]
 or rels={"relation1":{"\_select":["column1"]}}
+probably this is even better: select=["relation.id"]
 
 ### IDs
 
