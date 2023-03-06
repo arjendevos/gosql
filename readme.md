@@ -157,12 +157,14 @@ You can create a relation by adding a column name (this should be the table name
 - [x] fix if filter does not exists sql will output: WHERE ()
 - [x] limit queries to relations for x role
 - [x] setup entire project
-- [ ] Test all endpoints (high priority)
+- [x] Test all endpoints (high priority)
 - [x] middelware is somehow called 3 times (high priority)
 - [ ] add enum for role (low priority)
 - ~~ [ ] add filter to relation (low priority)~~
-- [ ] add oauth2 login endpoints (sith @google and @apple etc directives on the user table)
-- [ ] Add select columns (normal not on relations) (low priority)
+- [ ] add oauth2 login endpoints (sith @google and @apple etc directives on the user table) (low priority)
+- [ ] add email option (smtp with default templates) (low priority)
+- [ ] add password forget endpoints (very low priority)
+- [x] Add select columns (normal not on relations)
 
 ## Custom options
 
