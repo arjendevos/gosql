@@ -125,13 +125,9 @@ You can create a relation by adding a column name (this should be the table name
 - [x] rels={"relationTable":{"\_limit":4, "\_page":1}} (only for nToMany relations0
 - [x] order={"column": "desc", "column":"asc"}
 - [x] from=organization | from=user | no parameter (organization = get by organization id, get = fetch by user id, no parameter = get by organization id & user id)
-- [x] select=["column"] (omitempty fixes this on the json side)
+- [x] select=["column"] (omitempty fixes this on the json side) 
 - [ ] optimize select relation `&select=["id", "account"]`, if account is not in the select array, don't get relation from db
-- [ ] select relation columns. Either in the select query or in the rels query.
-
-select=["relation1": ["column1"], "relation2":[]]
-or rels={"relation1":{"\_select":["column1"]}}
-probably this is even better: select=["relation.id"]
+- [ ] select relation columns. Either in the select query select=["relation.id"]
 
 ### IDs
 
@@ -165,6 +161,7 @@ probably this is even better: select=["relation.id"]
 - [x] middelware is somehow called 3 times (high priority)
 - [ ] add enum for role (low priority)
 - ~~ [ ] add filter to relation (low priority)~~
+- [ ] add oauth2 login endpoints (sith @google and @apple etc directives on the user table)
 - [ ] Add select columns (normal not on relations) (low priority)
 
 ## Custom options
