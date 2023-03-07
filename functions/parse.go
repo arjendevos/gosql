@@ -64,6 +64,8 @@ func ParseGoSQLFile(fileName string, sqlType string) (string, []*Model) {
 		isAuthUser := false
 		isAuthOrganization := false
 		isAuthOrganizationUser := false
+		var hideModel bool
+		var oauth2 *Oauth2
 
 		for _, match := range attrMatch {
 			if match[1] != "" {
@@ -73,6 +75,24 @@ func ParseGoSQLFile(fileName string, sqlType string) (string, []*Model) {
 					x := strings.Split(match[2], ",")
 					for _, y := range x {
 						protectedRoutes = append(protectedRoutes, strings.TrimSpace(strings.ReplaceAll(strings.ReplaceAll(y, `"`, ""), `'`, "")))
+					}
+				}
+
+				if match[1] == "oauth2" {
+					if oauth2 == nil {
+						oauth2 = &Oauth2{}
+					}
+
+					x := strings.Split(match[2], ",")
+					for _, y := range x {
+						y = strings.TrimSpace(strings.ReplaceAll(strings.ReplaceAll(y, `"`, ""), `'`, ""))
+						if strings.EqualFold(y, "google") {
+							oauth2.Google = true
+						}
+
+						if strings.EqualFold(y, "apple") {
+							oauth2.Apple = true
+						}
 					}
 				}
 
@@ -96,6 +116,11 @@ func ParseGoSQLFile(fileName string, sqlType string) (string, []*Model) {
 					isAuthOrganizationUser = true
 					hasAuthOrganizationUser = true
 				}
+
+				if strings.EqualFold(match[3], "hide") {
+					hideModel = true
+				}
+
 			}
 		}
 
@@ -209,6 +234,8 @@ func ParseGoSQLFile(fileName string, sqlType string) (string, []*Model) {
 			ProtectedRoutes:        protectedRoutes,
 			IsAuthOrganization:     isAuthOrganization,
 			IsAuthOrganizationUser: isAuthOrganizationUser,
+			Hide:                   hideModel,
+			Oauth2:                 oauth2,
 		}
 
 		models = append(models, m)

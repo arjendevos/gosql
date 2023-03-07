@@ -36,6 +36,12 @@ func Convert(c *GoSQLConfig) error {
 		if err := os.MkdirAll(c.MigrationDir, os.ModePerm); err != nil {
 			return err
 		}
+		for _, filePath := range files {
+			fileName := strings.TrimSuffix(strings.TrimPrefix(filePath, c.SchemeDir), ".gosql")
+			if _, err := os.Stat(c.MigrationDir + "/" + fileName + ".up.sql"); os.IsNotExist(err) {
+				newFiles = append(newFiles, filePath)
+			}
+		}
 	} else {
 		fmt.Println("[1] -- Migration directory found")
 		for _, filePath := range files {
@@ -66,45 +72,51 @@ func Convert(c *GoSQLConfig) error {
 
 			err = c.ConvertToSql(fileName, sqlType, cache[filePath], models)
 			if err != nil {
-				return err
+				return fmt.Errorf("error converting to sql: %v", err)
 			}
 		}
 
-		fmt.Println("[3] -- Migrating converted sql files")
-		if err := migrate(); err != nil {
-			return err
-		}
+		// fmt.Println("[3] -- Migrating converted sql files")
+		// if err := migrate(); err != nil {
+		// 	return fmt.Errorf("error migrating: ", err)
+		// }
 
 	} else {
 		fmt.Println("[2] -- No new files found, skipping sql conversion")
-		fmt.Println("[3] -- Nothing to migrate, skipping migration")
+		// fmt.Println("[3] -- Nothing to migrate, skipping migration")
 	}
 
-	if err := c.SetupApi(models); err != nil {
-		return err
+	fmt.Println("[3] -- Setting up api & migrating (if needed)")
+	if err := c.InitialSetup(models); err != nil {
+		return fmt.Errorf("error setting up api: %v", err)
 	}
 
 	fmt.Println("[4] -- Converting models")
 	if err := c.ConvertApiModels(models); err != nil {
-		return err
+		return fmt.Errorf("error converting models: %v", err)
 	}
 
 	fmt.Println("[5] -- Converting controllers")
 	if err := c.ConvertApiControllers(models); err != nil {
-		return err
+		return fmt.Errorf("error converting controllers: %v", err)
 	}
 
 	fmt.Println("[6] -- Converting typescript types")
 	if err := c.ConvertTypes(models); err != nil {
-		return err
+		return fmt.Errorf("error converting typescript types: %v", err)
 	}
 
 	fmt.Println("[7] -- Downloading dependencies")
 	goModTidy := exec.Command("/opt/homebrew/bin/go", []string{"mod", "tidy"}...)
 	if err := goModTidy.Run(); err != nil {
-		return err
+		return fmt.Errorf("error running go mod tidy: %v", err)
 	}
 
-	fmt.Println("[8] -- Converted all files successfully")
+	fmt.Println("[8] -- Complete setup up")
+	if err := c.FullSetup(models); err != nil {
+		return fmt.Errorf("error fully setting up api: %v", err)
+	}
+
+	fmt.Println("[9] -- Converted all files successfully")
 	return nil
 }

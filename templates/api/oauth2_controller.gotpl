@@ -1,0 +1,171 @@
+package {{.PackageName}}
+
+import (
+    "net/http"
+	"os"
+    "strings"
+    "errors"
+	"database/sql"
+
+	"github.com/gin-gonic/gin"
+	"golang.org/x/oauth2"
+	"github.com/dgrijalva/jwt-go"
+	"golang.org/x/oauth2/google"
+	"github.com/volatiletech/sqlboiler/v4/boil"
+
+
+    {{- range .Imports }}
+    "{{ . }}"
+    {{- end }}
+)
+
+type Oauth2Controller struct {
+    *Client
+}
+
+var googleOauth2Config = &oauth2.Config{
+    ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
+    ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
+    RedirectURL:  os.Getenv("API_DOMAIN") + "/oauth2/google/callback",
+    Scopes: []string{
+        "openid",
+        "profile",
+        "email",
+    },
+    Endpoint: google.Endpoint,
+}
+
+type GoogleTokenInfo struct {
+	Iss string `json:"iss"`
+	// userId
+	Sub string `json:"sub"`
+	Azp string `json:"azp"`
+	// clientId
+	Aud string `json:"aud"`
+	Iat int64  `json:"iat"`
+	// expired time
+	Exp int64 `json:"exp"`
+
+	Email         string `json:"email"`
+	EmailVerified bool   `json:"email_verified"`
+	AtHash        string `json:"at_hash"`
+	Name          string `json:"name"`
+	GivenName     string `json:"given_name"`
+	FamilyName    string `json:"family_name"`
+	Picture       string `json:"picture"`
+	Local         string `json:"locale"`
+	jwt.StandardClaims
+}
+
+func (c *Oauth2Controller) Google(ctx *gin.Context) {
+    state := GenerateRandomToken()
+
+    ctx.SetSameSite(http.SameSiteLaxMode)
+	ctx.SetCookie("Oauth2State", state, 3600, "/", os.Getenv("APP_DOMAIN"), false, true)
+
+	ctx.Redirect(302, googleOauth2Config.AuthCodeURL(state))
+}
+
+func (c *Oauth2Controller) GoogleCallback(ctx *gin.Context) {
+    state, stateExists := ctx.GetQuery("state") // replace to get query exists
+    code, codeExists := ctx.GetQuery("code")
+
+    redirectUri := os.Getenv("APP_DOMAIN")
+
+    cookie, err := ctx.Cookie("Oauth2State")
+    if err != nil {
+        ctx.Redirect(302, redirectUri+"?error=invalid_state")
+		return
+    }
+
+	if !stateExists || !codeExists || !strings.EqualFold(cookie, state) {
+		ctx.Redirect(302, redirectUri+"?error=invalid_state")
+		return
+	}
+
+
+	token, err := googleOauth2Config.Exchange(ctx, code)
+	if err != nil {
+		ctx.Redirect(302, redirectUri+"?error=invalid_request")
+		return
+	}
+
+    parsedToken, _, err := new(jwt.Parser).ParseUnverified(token.Extra("id_token").(string), &GoogleTokenInfo{})
+	userInfo, ok := parsedToken.Claims.(*GoogleTokenInfo)
+	if !ok || err != nil {
+		ctx.Redirect(302, redirectUri+"?error=invalid_request")
+		return
+	}
+
+    existingUser, err := dm.{{ pluralize .UserTable.CamelName}}(
+        dm.{{ .UserTable.CamelName}}Where.Email.EQ(userInfo.Email),
+    ).One(c.ctx, c.db)
+    if err != nil && !errors.Is(err, sql.ErrNoRows) {
+        ctx.Redirect(302, redirectUri+"?error=generic_error")
+		return
+    }
+
+    if existingUser != nil {
+        // login
+	    ctx.Redirect(302, redirectUri+"?success=true&new_user=false") //ssend cookie
+        return
+    }
+
+    var account *dm.Account
+	var organization *dm.Organization
+    var userOrganization *dm.OrganizationUser
+
+	err = Transactor(c.db, func(tx *sql.Tx) error {
+		account = &dm.Account{
+			Email:             userInfo.Email,
+			Name:              userInfo.Name,
+			ProfilePictureURL: userInfo.Picture,
+		}
+		err = account.Insert(ctx, tx, boil.Infer())
+		if err != nil {
+			return err
+		}
+
+		organization = &dm.Organization{
+			Workspace: GenerateRandomToken(),
+			Name:      GenerateRandomToken(),
+		}
+		err = organization.Insert(ctx, tx, boil.Infer())
+		if err != nil {
+			return err
+		}
+
+		userOrganization = &dm.OrganizationUser{
+			AccountID:      account.ID,
+			OrganizationID: organization.ID,
+			Role:           "admin",
+		}
+		return userOrganization.Insert(ctx, tx, boil.Infer())
+	})
+	if err != nil {
+		ctx.Redirect(302, redirectUri+"?error=invalid_request")
+		return
+	}
+
+    jwtPayload := &JWTPayload{
+        {{- range $jwt := .JWTFields }}
+            {{- if .IsFromUserTable }}
+                {{ .CamelName }}: account.{{ .NormalName }},
+            {{- else if .IsFromOrganizationTable }}
+                {{ .CamelName }}: organization.{{ .NormalName }},
+            {{- else if .IsFromOrganizationUserTable }}
+                {{ .CamelName }}: userOrganization.{{.NormalName}},
+            {{- end}}
+        {{- end }}
+    }
+
+	tokenString, err := GenerateJWT(jwtPayload)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "invalid_request", "Invalid request", false))
+		return
+	}
+
+	ctx = SetAuthenticationCookie(ctx, tokenString)
+
+	ctx.Redirect(302, redirectUri+"?success=true&new_user=true") //ssend cookie
+}

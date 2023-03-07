@@ -68,7 +68,7 @@ Add `authUser` after your model to make it the main table for your user authenti
 
 You can exclude any table from the authentication by adding `@noAuth` after the table name.
 
-`@noAuth` is deprecated, use `@protected` instead.
+`@noAuth` is deprecated, use `@protected` instead. Use `@hide` to hide entire table from outside world.
 
 `@protected` has the following options (`@protected(LIST, BYID, CREATE, UPDATE, DELETE)`):
 
@@ -125,8 +125,7 @@ You can create a relation by adding a column name (this should be the table name
 - [x] rels={"relationTable":{"\_limit":4, "\_page":1}} (only for nToMany relations0
 - [x] order={"column": "desc", "column":"asc"}
 - [x] from=organization | from=user | no parameter (organization = get by organization id, get = fetch by user id, no parameter = get by organization id & user id)
-- [x] select=["column"] (omitempty fixes this on the json side) 
-- [ ] optimize select relation `&select=["id", "account"]`, if account is not in the select array, don't get relation from db
+- [x] select=["column"] (omitempty fixes this on the json side)
 - [ ] select relation columns. Either in the select query select=["relation.id"]
 
 ### IDs
@@ -161,10 +160,17 @@ You can create a relation by adding a column name (this should be the table name
 - [x] middelware is somehow called 3 times (high priority)
 - [ ] add enum for role (low priority)
 - ~~ [ ] add filter to relation (low priority)~~
-- [ ] add oauth2 login endpoints (sith @google and @apple etc directives on the user table) (low priority)
+- [x] Add select columns on relation (\_select:["id", "name"])
+- [x] Add select columns (normal not on relations)
+- [x] Add oauth2 login option
+- [x] Add oauth2 google login endpoints
+- [ ] Make oauth2 google endpoints better based on scheme (org etc) (high priority)
+- [ ] Add oauth2 facebook login endpoints (low priority)
+- [ ] Add oauth2 apple login endpoints (lowest priority)
 - [ ] add email option (smtp with default templates) (low priority)
 - [ ] add password forget endpoints (very low priority)
-- [x] Add select columns (normal not on relations)
+- [ ] Select columns fix created_at and updated_at omitempty problem (low priority)
+- [ ] optimize select relation `&select=["id", "account"]`, if account is not in the select array, don't get relation from db (low priority)
 
 ## Custom options
 

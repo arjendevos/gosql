@@ -37,16 +37,20 @@ func RunApi(db *sql.DB, c *ApiConfig) {
 	}))
 
     {{- if hasAuthFields .AuthFields }}
-        router.POST("/auth/signin", controllers.Auth.SignIn)
-        router.POST("/auth/signup", controllers.Auth.SignUp)
-        router.POST("/auth/signout", controllers.Auth.SignOut)
-        router.Use(AuthMiddleware(c.ExtraAuthMiddleware)).GET("/auth/me", controllers.Auth.Me)
+        authGroup := router.Group("/auth")
+        authGroup.POST("/signin", controllers.Auth.SignIn)
+        authGroup.POST("/signup", controllers.Auth.SignUp)
+        authGroup.POST("/signout", controllers.Auth.SignOut)
+        authGroup.Use(AuthMiddleware(c.ExtraAuthMiddleware)).GET("/auth/me", controllers.Auth.Me)
         {{- if .HasOrganization }}
-            router.Use(AuthMiddleware(c.ExtraAuthMiddleware)).POST("/auth/switch", controllers.Auth.SwitchOrganization)
+        authGroup.Use(AuthMiddleware(c.ExtraAuthMiddleware)).POST("/auth/switch", controllers.Auth.SwitchOrganization)
+        {{- end}}
+
+        {{ if hasOauth2 .Controllers}} 
+            router.GET("/oauth2/google", controllers.Oauth2.Google)
+            router.GET("/oauth2/google/callback", controllers.Oauth2.GoogleCallback)
         {{- end}}
     {{- end}}
-
-    
 
     {{ range $controller := .Controllers }}
         {{ firstToLower .CamelName }} := router.Group("/{{ .SnakeName }}"){{ if everyRouteIsProtected .ProtectedRoutes }}.Use(AuthMiddleware(c.ExtraAuthMiddleware)){{- end}}

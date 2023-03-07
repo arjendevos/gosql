@@ -152,6 +152,9 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 	modelImports = addImport(modelImports, moduleName+"/"+config.Output)
 
 	for _, m := range models {
+		if m.Hide {
+			continue
+		}
 		fset := token.NewFileSet()
 		f, err := parser.ParseFile(fset, fmt.Sprintf("%s/%s.go", config.Output, m.SnakeName), nil, parser.AllErrors)
 		if err != nil {
@@ -307,6 +310,19 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 	var OrganizationUserCamelName string
 
 	if authOrganization != nil && authOrganizationUser != nil {
+		if authUser != nil && authUser.Oauth2 != nil {
+			if err := populateTemplate("templates/api/oauth2_controller.gotpl", outputDir+"/generated_oauth2_controller.go", Oauth2TemplateData{
+				PackageName:           strings.ReplaceAll(c.ControllerOutputDir, "/", "_"),
+				UserTable:             authUser,
+				OrganizationTable:     authOrganization,
+				OrganizationUserTable: authOrganizationUser,
+				Imports:               modelImports,
+				JWTFields:             jwtFields,
+			}); err != nil {
+				return err
+			}
+		}
+
 		OrganizationCamelName = authOrganization.CamelName
 		OrganizationUserCamelName = authOrganizationUser.CamelName
 
@@ -517,6 +533,15 @@ func parseTemplate(c *TemplateConfig, shouldFormat bool) (string, error) {
 		"hasAuthFields": func(a []*JWTField) bool {
 			return len(a) > 0
 		},
+		"hasOauth2": func(a []*Model) bool {
+			for _, m := range a {
+				if m.Oauth2 != nil {
+					return true
+				}
+			}
+
+			return false
+		},
 		"isNotNil": func(a *JWTField) bool {
 			return a != nil
 		},
@@ -716,6 +741,11 @@ func getRelations(f *ast.File, m *Model, pkgName string, models []*Model) []*Mod
 						singularName := field.Names[0].Name
 						if isPlural(singularName) {
 							singularName = singularize(field.Names[0].Name)
+						}
+
+						if strings.EqualFold(singularName, "oauth2") {
+							// TODO: maybe hide @hide models here
+							continue
 						}
 
 						var columns []*Column

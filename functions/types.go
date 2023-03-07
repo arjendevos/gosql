@@ -20,6 +20,13 @@ type Model struct {
 	ProtectedRoutes        []string
 	IsAuthOrganization     bool
 	IsAuthOrganizationUser bool
+	Hide                   bool
+	Oauth2                 *Oauth2
+}
+
+type Oauth2 struct {
+	Google bool
+	Apple  bool
 }
 
 type ModelWithRelations struct {
@@ -89,6 +96,15 @@ type SetupMainTemplateData struct {
 type GeneralTemplateData struct {
 	PackageName string
 	Controllers []*Model
+}
+
+type Oauth2TemplateData struct {
+	PackageName           string
+	UserTable             *Model
+	OrganizationTable     *Model
+	OrganizationUserTable *Model
+	Imports               []string
+	JWTFields             []*JWTField
 }
 
 type QueryTemplateData struct {

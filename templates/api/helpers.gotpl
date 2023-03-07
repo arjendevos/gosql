@@ -7,9 +7,13 @@ import (
 	"time"
 	"errors"
 	"database/sql"
+	"net/http"
 
 	"github.com/dgrijalva/jwt-go"
 	{{- end }}
+
+	"crypto/rand"
+	"encoding/base64"
 
 	"github.com/gin-gonic/gin"
 	"gopkg.in/validator.v2"
@@ -109,4 +113,16 @@ func Transactor(db *sql.DB, txFunc func(*sql.Tx) error) (error) {
 	}
 
 	return tx.Commit()
+}
+
+func GenerateRandomToken() string {
+	b := make([]byte, 16)
+	_, _ = rand.Read(b)
+	return base64.URLEncoding.EncodeToString(b)
+}
+
+func SetAuthenticationCookie(ctx *gin.Context, tokenString string) *gin.Context {
+	ctx.SetSameSite(http.SameSiteLaxMode)
+	ctx.SetCookie("Authorization", tokenString, 3600*24*7, "/", os.Getenv("APP_DOMAIN"), false, true)
+	return ctx
 }

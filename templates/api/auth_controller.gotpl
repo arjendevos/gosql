@@ -259,8 +259,7 @@ func (c *AuthController) SignUp(ctx *gin.Context) {
 		return
 	}
 
-	ctx.SetSameSite(http.SameSiteLaxMode)
-	ctx.SetCookie("Authorization", tokenString, 3600*24*7, "/", os.Getenv("APP_DOMAIN"), false, true)
+	ctx = SetAuthenticationCookie(ctx, tokenString)
 
 	ctx.JSON(http.StatusOK, ResponseWithPayload(am.SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}({{ $dbVariable }}, nil), nil, nil, true))
 }
@@ -341,8 +340,7 @@ func (c *AuthController) Me(ctx *gin.Context) {
 			return
 		}
 
-		ctx.SetSameSite(http.SameSiteLaxMode)
-		ctx.SetCookie("Authorization", tokenString, 3600*24*7, "/", os.Getenv("APP_DOMAIN"), false, true)
+		ctx = SetAuthenticationCookie(ctx, tokenString)
 
 		ctx.JSON(http.StatusOK, ResponseWithPayload(nil, nil, nil, true))
 	}
