@@ -127,6 +127,7 @@ You can create a relation by adding a column name (this should be the table name
 - [x] from=organization | from=user | no parameter (organization = get by organization id, get = fetch by user id, no parameter = get by organization id & user id)
 - [x] select=["column"] (omitempty fixes this on the json side)
 - [x] select relation columns. {"\_select":["id", "created_at"]"}
+- [ ] Add permissions to a role or user
 
 ### IDs
 
