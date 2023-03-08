@@ -2,6 +2,7 @@ package {{ .PackageName }}
 
 import (
 	"strings"
+	"time"
 
 	"github.com/volatiletech/null/v8"
 )
@@ -24,4 +25,11 @@ func contains(a []string, s string) bool {
 
 func doesNotContain(a []string, s string) bool {
 	return !contains(a, s)
+}
+
+func convertTime(t time.Time) string {
+	if t.IsZero() {
+		return ""
+	}
+	return t.Format(time.RFC3339)
 }

@@ -68,9 +68,9 @@ func (c *GoSQLConfig) ConvertApiModels(models []*Model) error {
 		for _, cl := range m.Columns {
 			if !cl.IsRelation {
 				columnsWithRelationsAsIDs = append(columnsWithRelationsAsIDs, cl)
-				if cl.Type.GoTypeName == "time.Time" {
-					imports = addImport(imports, "time")
-				}
+				// if cl.Type.GoTypeName == "time.Time" {
+				// 	imports = addImport(imports, "time")
+				// }
 			}
 
 			if cl.IsRelation {
@@ -309,20 +309,20 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 	var OrganizationCamelName string
 	var OrganizationUserCamelName string
 
-	if authOrganization != nil && authOrganizationUser != nil {
-		if authUser != nil && authUser.Oauth2 != nil {
-			if err := populateTemplate("templates/api/oauth2_controller.gotpl", outputDir+"/generated_oauth2_controller.go", Oauth2TemplateData{
-				PackageName:           strings.ReplaceAll(c.ControllerOutputDir, "/", "_"),
-				UserTable:             authUser,
-				OrganizationTable:     authOrganization,
-				OrganizationUserTable: authOrganizationUser,
-				Imports:               modelImports,
-				JWTFields:             jwtFields,
-			}); err != nil {
-				return err
-			}
+	if authUser != nil && authUser.Oauth2 != nil {
+		if err := populateTemplate("templates/api/oauth2_controller.gotpl", outputDir+"/generated_oauth2_controller.go", Oauth2TemplateData{
+			PackageName:           strings.ReplaceAll(c.ControllerOutputDir, "/", "_"),
+			UserTable:             authUser,
+			OrganizationTable:     authOrganization,
+			OrganizationUserTable: authOrganizationUser,
+			Imports:               modelImports,
+			JWTFields:             jwtFields,
+		}); err != nil {
+			return err
 		}
+	}
 
+	if authOrganization != nil && authOrganizationUser != nil {
 		OrganizationCamelName = authOrganization.CamelName
 		OrganizationUserCamelName = authOrganizationUser.CamelName
 
@@ -543,6 +543,9 @@ func parseTemplate(c *TemplateConfig, shouldFormat bool) (string, error) {
 			return false
 		},
 		"isNotNil": func(a *JWTField) bool {
+			return a != nil
+		},
+		"isNotNilTable": func(a *Model) bool {
 			return a != nil
 		},
 		"neq": func(a string, b string) bool {

@@ -65,11 +65,10 @@ func CallMiddleware(c *gin.Context) {
 	methodCalls = append(methodCalls, pathCall)
 
 	for _, call := range methodCalls {
-		fmt.Println("Call:", call)
 		if !authCalls[role.(string)][call] && !authCalls["all"][call] {
 			fmt.Println("Call not allowed:")
 			fmt.Println()
-			fmt.Println("    ", call)
+			fmt.Printf(`   "%v": true`, call)
 			fmt.Println()
 			c.AbortWithStatusJSON(401, generated.ResponseWithPayload(nil, "unauthorized", "You are unauthorized", false))
 			return
@@ -105,6 +104,10 @@ func recursivelyFlattenMap(prefix string, m map[string]interface{}) string {
 	var key string
 
 	for k, v := range m {
+		if strings.HasPrefix(k, "_") {
+			key += prefix
+			continue
+		}
 		switch v.(type) {
 		case map[string]interface{}:
 			newM := v.(map[string]interface{})
@@ -126,7 +129,7 @@ func recursivelyFlattenMap(prefix string, m map[string]interface{}) string {
 		}
 	}
 
-	return key
+	return strings.TrimSuffix(key, "-")
 }
 
 func isPlural(word string) bool {

@@ -9,7 +9,7 @@ Current implementation is only done for postgresql, though other sql databases l
 3. Create a new file called `convert.go` in your `convert` folder
 4. Copy the following code into your `convert.go` file:
 
-```
+```go
 package main
 
 import (
@@ -46,7 +46,7 @@ func main() {
 
 Example model:
 
-```
+```gosql
 User {
   id uuid @unique @default(uuid_generate_v4()) @index
   name string
@@ -164,13 +164,13 @@ You can create a relation by adding a column name (this should be the table name
 - [x] Add select columns (normal not on relations)
 - [x] Add oauth2 login option
 - [x] Add oauth2 google login endpoints
-- [ ] Make oauth2 google endpoints better based on scheme (org etc) (high priority)
+- [x] Add custom marshaller for time.Time (high priority)
+- [x] Make oauth2 google endpoints better based on scheme (org etc) (high priority)
+- [x] Select columns fix created_at and updated_at omitempty problem (low priority)
 - [ ] Add oauth2 facebook login endpoints (low priority)
 - [ ] Add oauth2 apple login endpoints (lowest priority)
 - [ ] add email option (smtp with default templates) (low priority)
-- [ ] add password forget endpoints (very low priority)
-- [ ] Select columns fix created_at and updated_at omitempty problem (low priority)
-- [ ] optimize select relation `&select=["id", "account"]`, if account is not in the select array, don't get relation from db (low priority)
+- [ ] add password forget endpoints (very low priority) (should implement with email)
 
 ## Custom options
 
