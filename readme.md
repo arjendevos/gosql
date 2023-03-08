@@ -126,7 +126,7 @@ You can create a relation by adding a column name (this should be the table name
 - [x] order={"column": "desc", "column":"asc"}
 - [x] from=organization | from=user | no parameter (organization = get by organization id, get = fetch by user id, no parameter = get by organization id & user id)
 - [x] select=["column"] (omitempty fixes this on the json side)
-- [ ] select relation columns. Either in the select query select=["relation.id"]
+- [x] select relation columns. {"\_select":["id", "created_at"]"}
 
 ### IDs
 
