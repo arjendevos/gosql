@@ -74,10 +74,21 @@ func (c *GoSQLConfig) ConvertApiModels(models []*Model) error {
 			}
 
 			if cl.IsRelation {
+				t := Type{Name: "int", GoTypeName: "int", IsNullable: cl.Type.IsNullable, EmptyValue: cl.Type.EmptyValue}
+				for _, m := range models {
+					if m.CamelName == cl.Type.GoTypeName {
+						for _, r := range m.Columns {
+							if strings.EqualFold(r.Type.Name, "UUID") {
+								t = Type{Name: "string", GoTypeName: "string", IsNullable: cl.Type.IsNullable, EmptyValue: cl.Type.EmptyValue}
+							}
+						}
+					}
+				}
+
 				columnsWithRelationsAsIDs = append(columnsWithRelationsAsIDs, &Column{
 					SnakeName:  cl.SnakeName + "_id",
 					CamelName:  cl.CamelName + "ID",
-					Type:       &Type{Name: "int", GoTypeName: "int", IsNullable: cl.Type.IsNullable, EmptyValue: cl.Type.EmptyValue},
+					Type:       &t,
 					Attributes: cl.Attributes,
 					IsRelation: true,
 					Expose:     true,
@@ -163,7 +174,7 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 		relations := getRelations(f, m, pkgName, models)
 		modelWithRelations = append(modelWithRelations, &ModelWithRelations{Model: m, Relations: relations})
 
-		createColumns, updateColumns, mImports := getCreateAndUpdateColumns(m)
+		createColumns, updateColumns, mImports := getCreateAndUpdateColumns(m, models)
 
 		if err := populateTemplate("templates/api/controller.gotpl", outputDir+"/generated_"+m.SnakeName+"_controller.go", ControllerTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), CamelName: m.CamelName, Imports: imports, CreateColumns: createColumns, UpdateColumns: updateColumns, Model: m}); err != nil {
 			return err
@@ -185,10 +196,21 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 			}
 
 			if c.IsRelation {
+				t := Type{Name: "int", GoTypeName: "int", IsNullable: c.Type.IsNullable, EmptyValue: c.Type.EmptyValue}
+				for _, m := range models {
+					if m.CamelName == c.Type.GoTypeName {
+						for _, r := range m.Columns {
+							if strings.EqualFold(r.Type.Name, "uuid") {
+								t = Type{Name: "string", GoTypeName: "string", IsNullable: c.Type.IsNullable, EmptyValue: c.Type.EmptyValue}
+							}
+						}
+					}
+				}
+
 				columnsWithRelationsAsIDs = append(columnsWithRelationsAsIDs, &Column{
 					SnakeName:  c.SnakeName + "_id",
 					CamelName:  c.CamelName + "ID",
-					Type:       &Type{Name: "int", GoTypeName: "int", IsNullable: c.Type.IsNullable, EmptyValue: c.Type.EmptyValue},
+					Type:       &t,
 					Attributes: c.Attributes,
 					IsRelation: true,
 					Expose:     true,
@@ -303,7 +325,7 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 		}
 	}
 
-	createColumns, _, mImports := getCreateAndUpdateColumns(authUser)
+	createColumns, _, mImports := getCreateAndUpdateColumns(authUser, models)
 	var createColumnsOrganization []*Column
 	var createColumnsOrganizationUser []*Column
 	var OrganizationCamelName string
@@ -326,8 +348,8 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 		OrganizationCamelName = authOrganization.CamelName
 		OrganizationUserCamelName = authOrganizationUser.CamelName
 
-		createColumnsOrganizationModels, _, mImportsOrganization := getCreateAndUpdateColumns(authOrganization)
-		createColumnsOrganizationUserModels, _, mImportsOrganizationUser := getCreateAndUpdateColumns(authOrganizationUser)
+		createColumnsOrganizationModels, _, mImportsOrganization := getCreateAndUpdateColumns(authOrganization, models)
+		createColumnsOrganizationUserModels, _, mImportsOrganizationUser := getCreateAndUpdateColumns(authOrganizationUser, models)
 
 		createColumnsOrganization = createColumnsOrganizationModels
 		createColumnsOrganizationUser = createColumnsOrganizationUserModels
@@ -399,7 +421,7 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 	return nil
 }
 
-func getCreateAndUpdateColumns(m *Model) ([]*Column, []*Column, []string) {
+func getCreateAndUpdateColumns(m *Model, availableModels []*Model) ([]*Column, []*Column, []string) {
 	var createColumns []*Column
 	var updateColumns []*Column
 	var imports []string
@@ -415,10 +437,21 @@ func getCreateAndUpdateColumns(m *Model) ([]*Column, []*Column, []string) {
 		}
 
 		if c.IsRelation {
+			t := Type{Name: "int", GoTypeName: "int", IsNullable: c.Type.IsNullable, EmptyValue: c.Type.EmptyValue}
+			for _, m := range availableModels {
+				if m.CamelName == c.Type.GoTypeName {
+					for _, r := range m.Columns {
+						if strings.EqualFold(r.Type.Name, "uuid") {
+							t = Type{Name: "string", GoTypeName: "string", IsNullable: c.Type.IsNullable, EmptyValue: c.Type.EmptyValue}
+						}
+					}
+				}
+			}
+
 			c := &Column{
 				SnakeName:  c.SnakeName + "_id",
 				CamelName:  c.CamelName + "ID",
-				Type:       &Type{GoTypeName: "int", Name: "int", IsNullable: c.Type.IsNullable, HasDifferentCharLength: false, CharLength: 0, EmptyValue: "0"},
+				Type:       &t,
 				Attributes: []*Attribute{},
 				IsRelation: true,
 				Expose:     true,

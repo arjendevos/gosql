@@ -241,9 +241,9 @@ func ParseGoSQLFile(fileName string, sqlType string) (string, []*Model) {
 		models = append(models, m)
 
 		// for _, m := range models {
-		// 	fmt.Println(m.Name)
+		// 	fmt.Println(m.CamelName)
 		// 	for _, c := range m.Columns {
-		// 		fmt.Println(c.Name)
+		// 		fmt.Println(c.CamelName)
 		// 		fmt.Println("  ", c.Type.Name)
 		// 		fmt.Println("  ", c.Type.IsNullable)
 		// 		fmt.Println("  ", c.Type.HasDifferentCharLength)
