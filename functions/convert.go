@@ -87,7 +87,8 @@ func Convert(c *GoSQLConfig) error {
 	}
 
 	fmt.Println("[3] -- Setting up api & migrating (if needed)")
-	if err := c.InitialSetup(models); err != nil {
+	isFirstTime, err := c.InitialSetup(models)
+	if err != nil {
 		return fmt.Errorf("error setting up api: %v", err)
 	}
 
@@ -113,7 +114,7 @@ func Convert(c *GoSQLConfig) error {
 	}
 
 	fmt.Println("[8] -- Complete setup up")
-	if err := c.FullSetup(models); err != nil {
+	if err := c.FullSetup(models, isFirstTime); err != nil {
 		return fmt.Errorf("error fully setting up api: %v", err)
 	}
 

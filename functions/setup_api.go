@@ -5,15 +5,15 @@ import (
 	"os/exec"
 )
 
-func (c *GoSQLConfig) InitialSetup(models []*Model) error {
+func (c *GoSQLConfig) InitialSetup(models []*Model) (bool, error) {
 	if !c.SetupProject {
-		return nil
+		return false, nil
 	}
 	projectDir, _ := os.Getwd()
 
 	modFile, err := parseModFile()
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	moduleName := modFile.Module.Mod.Path
@@ -21,32 +21,34 @@ func (c *GoSQLConfig) InitialSetup(models []*Model) error {
 
 	if _, err := os.Stat(projectDir + "/database/client.go"); os.IsNotExist(err) {
 		if err := populateTemplate("templates/setup/database.gotpl", projectDir+"/database/client.go", SetupMainTemplateData{PackageName: "database", Imports: imports}); err != nil {
-			return err
+			return false, err
 		}
 	}
 
 	if _, err := os.Stat(projectDir + "/database/migrate.go"); os.IsNotExist(err) {
 		if err := populateTemplate("templates/setup/migrate.gotpl", projectDir+"/database/migrate.go", SetupMainTemplateData{PackageName: "database", Imports: imports, MigrationPath: c.MigrationDir}); err != nil {
-			return err
+			return false, err
 		}
 	}
 
 	imports = append(imports, moduleName+"/database")
 
+	isFirstTime := false
 	if _, err := os.Stat(projectDir + "/main.go"); os.IsNotExist(err) {
+		isFirstTime = true
 		if err := populateTemplate("templates/setup/main.gotpl", projectDir+"/main.go", SetupMainTemplateData{PackageName: "main", Imports: imports, FullSetup: false}); err != nil {
-			return err
+			return false, err
 		}
 
 		if err := migrate(); err != nil {
-			return err
+			return false, err
 		}
 	}
 
-	return nil
+	return isFirstTime, nil
 }
 
-func (c *GoSQLConfig) FullSetup(models []*Model) error {
+func (c *GoSQLConfig) FullSetup(models []*Model, isFirstTime bool) error {
 	if !c.SetupProject {
 		return nil
 	}
@@ -94,7 +96,7 @@ func (c *GoSQLConfig) FullSetup(models []*Model) error {
 	imports = append(imports, moduleName+"/database")
 	imports = addImport(imports, moduleName+"/"+c.ControllerOutputDir)
 
-	if _, err := os.Stat(projectDir + "/main.go"); os.IsNotExist(err) {
+	if _, err := os.Stat(projectDir + "/main.go"); os.IsNotExist(err) || isFirstTime {
 		if err := populateTemplate("templates/setup/main.gotpl", projectDir+"/main.go", SetupMainTemplateData{PackageName: "main", Imports: imports, FullSetup: true, HasExtraMiddleWare: hasAuthUser && hasAuthOrganization && hasAuthOrganizationUser}); err != nil {
 			return err
 		}
