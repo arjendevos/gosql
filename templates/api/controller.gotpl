@@ -21,14 +21,14 @@ type {{ .CamelName }}Controller struct {
 }
 
 func (c *{{ .CamelName}}Controller) List(ctx *gin.Context) {
-	queryMods, err := parse{{ .CamelName }}ListQueryToMods(ctx)
+	queryMods, err := Parse{{ .CamelName }}ListQueryToMods(ctx)
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "invalid_request", "Invalid request", false))
 		return
 	}
 
 	{{ if isProtected .ProtectedRoutes "LIST" }}
-		authQueryMods, err := parse{{ .CamelName }}AuthToMods(ctx)
+		authQueryMods, err := Parse{{ .CamelName }}AuthToMods(ctx)
 		if err != nil {
 			ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "invalid_request", "Invalid request", false))
 			return
@@ -46,14 +46,14 @@ func (c *{{ .CamelName}}Controller) List(ctx *gin.Context) {
 }
 
 func (c *{{ .CamelName}}Controller) ByID(ctx *gin.Context) {
-	queryMods, err := parse{{ .CamelName }}ByIDParamToMods(ctx)
+	queryMods, err := Parse{{ .CamelName }}ByIDParamToMods(ctx)
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "invalid_request", "Invalid request", false))
 		return
 	}
 
 	{{ if isProtected .ProtectedRoutes "BYID" }}
-		authQueryMods, err := parse{{ .CamelName }}AuthToMods(ctx)
+		authQueryMods, err := Parse{{ .CamelName }}AuthToMods(ctx)
 		if err != nil {
 			ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "invalid_request", "Invalid request", false))
 			return
@@ -75,7 +75,7 @@ func (c *{{ .CamelName}}Controller) ByID(ctx *gin.Context) {
 }
 
 func (c *{{ .CamelName}}Controller) Create(ctx *gin.Context) {
-	body, err := parse{{ .CamelName }}CreateBody(ctx)
+	body, err := Parse{{ .CamelName }}CreateBody(ctx)
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "invalid_request", "Invalid request", false))
 		return
@@ -108,7 +108,7 @@ func (c *{{ .CamelName}}Controller) Create(ctx *gin.Context) {
 		}
 	}
 
-	model := {{ firstToLower .CamelName}}CreateBodyToSqlBoiler(ctx, body)
+	model := {{ .CamelName}}CreateBodyToSqlBoiler(ctx, body)
 	err = model.Insert(ctx, c.db, boil.Infer())
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "generic", "Something went wrong", false))
@@ -119,14 +119,14 @@ func (c *{{ .CamelName}}Controller) Create(ctx *gin.Context) {
 }
 
 func (c *{{ .CamelName}}Controller) Update(ctx *gin.Context) {
-	queryMods, err := parse{{ .CamelName }}ByIDParamToMods(ctx)
+	queryMods, err := Parse{{ .CamelName }}ByIDParamToMods(ctx)
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "invalid_request", "Invalid request", false))
 		return
 	}
 
 	{{ if isProtected .ProtectedRoutes "UPDATE" }}
-		authQueryMods, err := parse{{ .CamelName }}AuthToMods(ctx)
+		authQueryMods, err := Parse{{ .CamelName }}AuthToMods(ctx)
 		if err != nil {
 			ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "invalid_request", "Invalid request", false))
 			return
@@ -134,7 +134,7 @@ func (c *{{ .CamelName}}Controller) Update(ctx *gin.Context) {
 		queryMods = append(queryMods, authQueryMods...)
 	{{- end}}
 
-	body, err := parse{{ .CamelName }}UpdateBody(ctx)
+	body, err := Parse{{ .CamelName }}UpdateBody(ctx)
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "invalid_request", "Invalid request", false))
 		return
@@ -150,7 +150,7 @@ func (c *{{ .CamelName}}Controller) Update(ctx *gin.Context) {
 		return
 	}
 
-	model := {{ firstToLower .CamelName}}UpdateBodyToSqlBoiler(ctx, body, existing)
+	model := {{ .CamelName}}UpdateBodyToSqlBoiler(ctx, body, existing)
 	_, err = model.Update(ctx, c.db, boil.Infer())
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "generic", "Something went wrong", false))
@@ -161,14 +161,14 @@ func (c *{{ .CamelName}}Controller) Update(ctx *gin.Context) {
 }
 
 func (c *{{ .CamelName}}Controller) Delete(ctx *gin.Context) {
-	queryMods, err := parse{{ .CamelName }}ByIDParamToMods(ctx)
+	queryMods, err := Parse{{ .CamelName }}ByIDParamToMods(ctx)
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "invalid_request", "Invalid request", false))
 		return
 	}
 
 	{{ if isProtected .ProtectedRoutes "DELETE" }}
-		authQueryMods, err := parse{{ .CamelName }}AuthToMods(ctx)
+		authQueryMods, err := Parse{{ .CamelName }}AuthToMods(ctx)
 		if err != nil {
 			ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "invalid_request", "Invalid request", false))
 			return

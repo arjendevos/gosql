@@ -53,12 +53,11 @@ func RunApi(db *sql.DB, c *ApiConfig) {
     {{- end}}
 
     {{ range $controller := .Controllers }}
+        {{ $newRoutes := sortRoutesFromUnprotectedToProtected .}}
         {{ firstToLower .CamelName }} := router.Group("/{{ .SnakeName }}"){{ if everyRouteIsProtected .ProtectedRoutes }}.Use(AuthMiddleware(c.ExtraAuthMiddleware)){{- end}}
-        {{ firstToLower .CamelName }}.{{- if everyRouteIsProtected .ProtectedRoutes }}{{- else if isProtected .ProtectedRoutes "LIST" }}Use(AuthMiddleware(c.ExtraAuthMiddleware)).{{- end}}GET("", controllers.{{ .CamelName}}.List)
-        {{ firstToLower .CamelName }}.{{- if everyRouteIsProtected .ProtectedRoutes }}{{- else if isProtected .ProtectedRoutes "BYID" }}Use(AuthMiddleware(c.ExtraAuthMiddleware)).{{- end}}GET(":id", controllers.{{ .CamelName}}.ByID)
-        {{ firstToLower .CamelName }}.{{- if everyRouteIsProtected .ProtectedRoutes }}{{- else if isProtected .ProtectedRoutes "CREATE" }}Use(AuthMiddleware(c.ExtraAuthMiddleware)).{{- end}}POST("", controllers.{{ .CamelName}}.Create)
-        {{ firstToLower .CamelName }}.{{- if everyRouteIsProtected .ProtectedRoutes }}{{- else if isProtected .ProtectedRoutes "UPDATE" }}Use(AuthMiddleware(c.ExtraAuthMiddleware)).{{- end}}PATCH(":id", controllers.{{ .CamelName}}.Update)
-        {{ firstToLower .CamelName }}.{{- if everyRouteIsProtected .ProtectedRoutes }}{{- else if isProtected .ProtectedRoutes "DELETE" }}Use(AuthMiddleware(c.ExtraAuthMiddleware)).{{- end}}DELETE(":id", controllers.{{ .CamelName}}.Delete)
+        {{- range $route := $newRoutes }}
+            {{ firstToLower  $controller.CamelName }}.{{- if everyRouteIsProtected  $controller.ProtectedRoutes }}{{- else if isProtected $controller.ProtectedRoutes .CapitalName }}Use(AuthMiddleware(c.ExtraAuthMiddleware)).{{- end}}{{.Method}}("{{.Path}}", controllers.{{  $controller.CamelName}}.{{.LowerName}})
+        {{- end }}
     {{ end }}
 
     if c.CustomRoutes != nil {

@@ -548,6 +548,55 @@ type TemplateConfig struct {
 	Data     interface{}
 }
 
+type Route struct {
+	CapitalName string
+	LowerName   string
+	Method      string
+	Path        string
+}
+
+func convertToRoute(r string) Route {
+	switch r {
+	case "LIST":
+		return Route{
+			CapitalName: "LIST",
+			LowerName:   "List",
+			Method:      "GET",
+			Path:        "",
+		}
+	case "BYID":
+		return Route{
+			CapitalName: "BYID",
+			LowerName:   "ByID",
+			Method:      "GET",
+			Path:        ":id",
+		}
+	case "CREATE":
+		return Route{
+			CapitalName: "CREATE",
+			LowerName:   "Create",
+			Method:      "POST",
+			Path:        "",
+		}
+	case "UPDATE":
+		return Route{
+			CapitalName: "UPDATE",
+			LowerName:   "Update",
+			Method:      "PATCH",
+			Path:        ":id",
+		}
+	case "DELETE":
+		return Route{
+			CapitalName: "DELETE",
+			LowerName:   "Delete",
+			Method:      "DELETE",
+			Path:        ":id",
+		}
+	default:
+		return Route{}
+	}
+}
+
 func parseTemplate(c *TemplateConfig, shouldFormat bool) (string, error) {
 	tpl, err := template.New("").Funcs(template.FuncMap{
 		"toSnake":      camelToSnake,
@@ -562,6 +611,24 @@ func parseTemplate(c *TemplateConfig, shouldFormat bool) (string, error) {
 		"everyRouteIsProtected": everyRouteIsProtected,
 		"isProtected": func(r []string, rn string) bool {
 			return stringArrayContains(r, rn)
+		},
+		"sortRoutesFromUnprotectedToProtected": func(c *Model) []Route {
+			var routes = []string{"LIST", "BYID", "CREATE", "UPDATE", "DELETE"}
+			var newRoutes = []Route{}
+			for _, r := range routes {
+				if stringArrayContains(c.HideRoutes, r) {
+					continue
+				}
+				if stringArrayContains(c.ProtectedRoutes, r) {
+					// is Protected
+					newRoutes = append(newRoutes, convertToRoute(r))
+				} else {
+					// is unprotected
+					newRoutes = append([]Route{convertToRoute(r)}, newRoutes...)
+				}
+			}
+
+			return newRoutes
 		},
 		"hasAuthFields": func(a []*JWTField) bool {
 			return len(a) > 0

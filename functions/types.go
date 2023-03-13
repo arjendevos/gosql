@@ -18,6 +18,7 @@ type Model struct {
 	IsAuthRequired         bool
 	IsAuthUser             bool
 	ProtectedRoutes        []string
+	HideRoutes             []string
 	IsAuthOrganization     bool
 	IsAuthOrganizationUser bool
 	Hide                   bool

@@ -30,7 +30,7 @@ type SignInBody struct {
 
 func (c *AuthController) SignIn(ctx *gin.Context) {
 	var body SignInBody
-	if err := bindAndValidateJSON(ctx, &body); err != nil {
+	if err := BindAndValidateJSON(ctx, &body); err != nil {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "invalid_request", "Invalid request", false))
 		return
 	}
@@ -99,7 +99,7 @@ type SignUpBody struct {
 
 func (c *AuthController) SignUp(ctx *gin.Context) {
 	var body SignUpBody
-	if err := bindAndValidateJSON(ctx, &body); err != nil {
+	if err := BindAndValidateJSON(ctx, &body); err != nil {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "invalid_request", "Invalid request", false))
 		return
 	}
@@ -171,7 +171,7 @@ func (c *AuthController) SignUp(ctx *gin.Context) {
 			}
 		{{- end }}
 
-		model{{.CamelName}} := {{ firstToLower .CamelName}}CreateBodyToSqlBoiler(ctx, body.{{.CamelName}})
+		model{{.CamelName}} := {{  .CamelName}}CreateBodyToSqlBoiler(ctx, body.{{.CamelName}})
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(body.{{.CamelName}}.Password), 14)
 		if err != nil {
 			return errors.New("Something went wrong, try again later")
@@ -184,13 +184,13 @@ func (c *AuthController) SignUp(ctx *gin.Context) {
 		}
 
 		{{ if and .HasOrganization .HasOrganizationUser}}
-			model{{.OrganizationCamelName}} := {{ firstToLower .OrganizationCamelName}}CreateBodyToSqlBoiler(ctx, body.{{.OrganizationCamelName}}.{{.OrganizationCamelName}}CreateBody)
+			model{{.OrganizationCamelName}} := {{  .OrganizationCamelName}}CreateBodyToSqlBoiler(ctx, body.{{.OrganizationCamelName}}.{{.OrganizationCamelName}}CreateBody)
 			err = model{{.OrganizationCamelName}}.Insert(ctx, c.db, boil.Infer())
 			if err != nil {
 				return errors.New("Something went wrong, try again later")
 			}
 			
-			model{{.OrganizationUserCamelName}} := {{ firstToLower .OrganizationUserCamelName}}CreateBodyToSqlBoiler(ctx, &{{.OrganizationUserCamelName}}CreateBody{
+			model{{.OrganizationUserCamelName}} := {{  .OrganizationUserCamelName}}CreateBodyToSqlBoiler(ctx, &{{.OrganizationUserCamelName}}CreateBody{
 				{{ .OrganizationCamelName}}ID: model{{.OrganizationCamelName}}.ID,
 				{{ .CamelName}}ID: model{{.CamelName}}.ID,
 				{{- range .OrganizationUserCreateColumns }}
@@ -301,7 +301,7 @@ func (c *AuthController) Me(ctx *gin.Context) {
 		var body struct {
 			OrganizationID int `json:"organization_id" validate:"nonzero"`
 		}
-		if err := bindAndValidateJSON(ctx, &body); err != nil {
+		if err := BindAndValidateJSON(ctx, &body); err != nil {
 			ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "invalid_request", "Invalid request", false))
 			return
 		}

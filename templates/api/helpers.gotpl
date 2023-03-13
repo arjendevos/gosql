@@ -34,7 +34,7 @@ func ResponseWithPayload(payload interface{}, errCode, message interface{}, ok b
 	return gin.H{"payload": payload, "error": e, "message": m, "ok": ok}
 }
 
-func bindAndValidateJSON(context *gin.Context, obj interface{}) error {
+func BindAndValidateJSON(context *gin.Context, obj interface{}) error {
 	if err := context.ShouldBindJSON(obj); err != nil {
 		return err
 	}

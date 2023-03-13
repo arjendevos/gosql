@@ -94,8 +94,10 @@ func (c *GoSQLConfig) FullSetup(models []*Model) error {
 	imports = append(imports, moduleName+"/database")
 	imports = addImport(imports, moduleName+"/"+c.ControllerOutputDir)
 
-	if err := populateTemplate("templates/setup/main.gotpl", projectDir+"/main.go", SetupMainTemplateData{PackageName: "main", Imports: imports, FullSetup: true, HasExtraMiddleWare: hasAuthUser && hasAuthOrganization && hasAuthOrganizationUser}); err != nil {
-		return err
+	if _, err := os.Stat(projectDir + "/main.go"); os.IsNotExist(err) {
+		if err := populateTemplate("templates/setup/main.gotpl", projectDir+"/main.go", SetupMainTemplateData{PackageName: "main", Imports: imports, FullSetup: true, HasExtraMiddleWare: hasAuthUser && hasAuthOrganization && hasAuthOrganizationUser}); err != nil {
+			return err
+		}
 	}
 
 	return nil

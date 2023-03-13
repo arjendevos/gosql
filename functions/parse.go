@@ -61,6 +61,7 @@ func ParseGoSQLFile(fileName string, sqlType string) (string, []*Model) {
 		attrMatch := attrRegex.FindAllStringSubmatch(extraAttributeLine, -1)
 
 		protectedRoutes := []string{}
+		hideRoutes := []string{}
 		isAuthUser := false
 		isAuthOrganization := false
 		isAuthOrganizationUser := false
@@ -75,6 +76,13 @@ func ParseGoSQLFile(fileName string, sqlType string) (string, []*Model) {
 					x := strings.Split(match[2], ",")
 					for _, y := range x {
 						protectedRoutes = append(protectedRoutes, strings.TrimSpace(strings.ReplaceAll(strings.ReplaceAll(y, `"`, ""), `'`, "")))
+					}
+				}
+
+				if match[1] == "hide" {
+					x := strings.Split(match[2], ",")
+					for _, y := range x {
+						hideRoutes = append(hideRoutes, strings.TrimSpace(strings.ReplaceAll(strings.ReplaceAll(y, `"`, ""), `'`, "")))
 					}
 				}
 
@@ -232,6 +240,7 @@ func ParseGoSQLFile(fileName string, sqlType string) (string, []*Model) {
 			IsAuthRequired:         false, // @deprecated
 			IsAuthUser:             isAuthUser,
 			ProtectedRoutes:        protectedRoutes,
+			HideRoutes:             hideRoutes,
 			IsAuthOrganization:     isAuthOrganization,
 			IsAuthOrganizationUser: isAuthOrganizationUser,
 			Hide:                   hideModel,

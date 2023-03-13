@@ -107,7 +107,7 @@ import (
 		}, nil
 	}
 
-	func parse{{ .CamelName }}ListQueryToMods(context *gin.Context) ([]qm.QueryMod, error) {
+	func Parse{{ .CamelName }}ListQueryToMods(context *gin.Context) ([]qm.QueryMod, error) {
 		query, err := parse{{ .CamelName }}ListQuery(context)
 		if err != nil {
 			return nil, err
@@ -142,7 +142,7 @@ import (
 		return append(queryMods, extraMods...), nil
 	}
 
-	func parse{{ .CamelName }}ByIDParamToMods(context *gin.Context) ([]qm.QueryMod, error) {
+	func Parse{{ .CamelName }}ByIDParamToMods(context *gin.Context) ([]qm.QueryMod, error) {
 		id := context.Param("id")
 		idInInt, err := strconv.Atoi(id)
 		if err != nil {
@@ -200,7 +200,7 @@ import (
 		}
 	{{- end }}
 
-	func parse{{ .CamelName }}AuthToMods(context *gin.Context) ([]qm.QueryMod, error) {
+	func Parse{{ .CamelName }}AuthToMods(context *gin.Context) ([]qm.QueryMod, error) {
 		{{- if and (areAuthFieldsInModel .Columns $authFields) ($hasMultipleAuthFields) (not .IsAuthUser) (not .IsAuthOrganization)}}
 			authQuery, err := parse{{ .CamelName }}AuthQuery(context)
 			if err != nil {

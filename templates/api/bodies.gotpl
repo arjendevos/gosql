@@ -53,16 +53,16 @@ import (
 		{{- end }}
 	}
 
-	func parse{{ .CamelName }}CreateBody(context *gin.Context) (*{{ .CamelName }}CreateBody, error) {
+	func Parse{{ .CamelName }}CreateBody(context *gin.Context) (*{{ .CamelName }}CreateBody, error) {
 		var body {{ .CamelName }}CreateBody
-		if err := bindAndValidateJSON(context, &body); err != nil {
+		if err := BindAndValidateJSON(context, &body); err != nil {
 			return nil, err
 		}
 
 		return &body, nil
 	}
 
-	func {{firstToLower .CamelName}}CreateBodyToSqlBoiler(context *gin.Context, body *{{ .CamelName }}CreateBody) *dm.{{ .CamelName }} {
+	func {{ .CamelName}}CreateBodyToSqlBoiler(context *gin.Context, body *{{ .CamelName }}CreateBody) *dm.{{ .CamelName }} {
 		{{- if isFalse (isAuthTable .)}}
 			{{- if and (hasAuthFields $authFields) (isProtected $controller.ProtectedRoutes "CREATE") }}
 				{{- range $authField := $authFields }}
@@ -121,16 +121,16 @@ import (
 		return &model
 	}
 
-	func parse{{ .CamelName }}UpdateBody(context *gin.Context) (*{{ .CamelName }}UpdateBody, error) {
+	func Parse{{ .CamelName }}UpdateBody(context *gin.Context) (*{{ .CamelName }}UpdateBody, error) {
 		var body {{ .CamelName }}UpdateBody
-		if err := bindAndValidateJSON(context, &body); err != nil {
+		if err := BindAndValidateJSON(context, &body); err != nil {
 			return nil, err
 		}
 
 		return &body, nil
 	}
 
-	func {{ firstToLower .CamelName}}UpdateBodyToSqlBoiler(context *gin.Context, body *{{ .CamelName }}UpdateBody, oldModel *dm.{{ .CamelName }}) *dm.{{ .CamelName }} {
+	func {{ .CamelName}}UpdateBodyToSqlBoiler(context *gin.Context, body *{{ .CamelName }}UpdateBody, oldModel *dm.{{ .CamelName }}) *dm.{{ .CamelName }} {
 		{{- if isFalse (isAuthTable .)}}
 			{{- if and (hasAuthFields $authFields) (isProtected $controller.ProtectedRoutes "UPDATE") }}
 				{{- range $authField := $authFields }}
