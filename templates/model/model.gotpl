@@ -11,7 +11,7 @@ type {{ .CamelName }} struct {
         {{- if eq .Type.GoTypeName "time.Time" }}
             {{ .CamelName }} string `boil:"{{ .SnakeName }}" json:"{{ if .Expose }}{{ .SnakeName }},omitempty{{- else}}-{{- end}}" toml:"{{ .SnakeName }}" yaml:"{{  .SnakeName }}"`
         {{- else}}
-            {{ .CamelName }} {{ .Type.GoTypeName }} `boil:"{{ .SnakeName }}" json:"{{ if .Expose }}{{ .SnakeName }},omitempty{{- else}}-{{- end}}" toml:"{{ .SnakeName }}" yaml:"{{  .SnakeName }}"`
+            {{ .CamelName }} {{ if eq .Type.GoTypeName "bool" }}*{{ end}}{{ .Type.GoTypeName }} `boil:"{{ .SnakeName }}" json:"{{ if .Expose }}{{ .SnakeName }},omitempty{{- else}}-{{- end}}" toml:"{{ .SnakeName }}" yaml:"{{  .SnakeName }}"`
         {{- end}}
     {{- end }}
 
@@ -50,7 +50,7 @@ func SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}(a *dm.{{ .CamelName }}, excl
             {{- if eq .Type.GoTypeName "time.Time" }}
                 {{ .CamelName }}: convertTime(a.{{ .CamelName }}),
             {{- else}}
-                {{ .CamelName }}: a.{{ .CamelName }},
+                {{ .CamelName }}: {{- if eq .Type.GoTypeName "bool"}}&{{- end}}a.{{ .CamelName }},
             {{- end}}
         {{- end}}
         {{- end}}
