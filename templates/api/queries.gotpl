@@ -99,6 +99,10 @@ import (
 			return nil, err
 		}
 
+		if limitInInt > 25 {
+			limitInInt = 25
+		}
+
 		return &{{ .CamelName }}ListQuery{
 			Page:   pageInInt,
 			Limit:  limitInInt,

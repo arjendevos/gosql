@@ -1,48 +1,57 @@
-package {{ .PackageName }}
+package main
 
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/joho/godotenv"
 )
 
 // HOW TO WRITE A MIGRATION
 // https://github.com/golang-migrate/migrate/blob/master/MIGRATIONS.md
-func Migrate() error {
+func main() {
+	godotenv.Load("../.env")
 	os.Setenv("DATABASE_MULTIPLE_STATEMENTS", "true")
 	fmt.Println("Migrating...")
 
+		newDir, _ := os.Getwd()
+	os.Chdir(strings.TrimSuffix(newDir, "/migrate"))
+
 	m, err := migrate.New(
-		"file://{{ .MigrationPath }}",
+		"file:///Users/arjen/Workspace/go/src/github.com/polyte-api/database/migrations",
 		os.Getenv("POSTGRESQL_URL"),
 	)
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
-	
+
 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-		return err
+		log.Fatal(err)
 	}
 
 	fmt.Println("Done migrating!")
 	fmt.Println("Running sqlboiler...")
 
 	if err := runSqlBoiler(); err != nil {
-		return err
+		log.Fatal(err)
 	}
 
 	fmt.Println("Done running sqlboiler!")
 
-	return nil
 }
 
 func runSqlBoiler() error {
 	var stdout bytes.Buffer
+
+	newDir, _ := os.Getwd()
+	os.Chdir(strings.TrimSuffix(newDir, "/migrate"))
 
 	cmd := exec.Command("sqlboiler", []string{"psql", "--wipe", "--no-tests"}...)
 	cmd.Stdout = &stdout
@@ -54,3 +63,4 @@ func runSqlBoiler() error {
 
 	return nil
 }
+

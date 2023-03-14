@@ -3,52 +3,41 @@ package functions
 import (
 	"os"
 	"os/exec"
+	"strings"
 )
 
-func (c *GoSQLConfig) InitialSetup(models []*Model) (bool, error) {
+func (c *GoSQLConfig) InitialSetup(models []*Model) error {
 	if !c.SetupProject {
-		return false, nil
+		return nil
 	}
 	projectDir, _ := os.Getwd()
-
-	modFile, err := parseModFile()
-	if err != nil {
-		return false, err
-	}
-
-	moduleName := modFile.Module.Mod.Path
+	projectDir = strings.TrimSuffix(projectDir, "/migrate")
 	var imports []string
+	os.Chdir(projectDir)
 
 	if _, err := os.Stat(projectDir + "/database/client.go"); os.IsNotExist(err) {
 		if err := populateTemplate("templates/setup/database.gotpl", projectDir+"/database/client.go", SetupMainTemplateData{PackageName: "database", Imports: imports}); err != nil {
-			return false, err
+			return err
 		}
 	}
 
-	if _, err := os.Stat(projectDir + "/database/migrate.go"); os.IsNotExist(err) {
-		if err := populateTemplate("templates/setup/migrate.gotpl", projectDir+"/database/migrate.go", SetupMainTemplateData{PackageName: "database", Imports: imports, MigrationPath: c.MigrationDir}); err != nil {
-			return false, err
+	if _, err := os.Stat(projectDir + "/migrate"); os.IsNotExist(err) {
+		err = os.Mkdir(projectDir+"/migrate", os.ModePerm)
+		if err != nil {
+			return err
 		}
 	}
 
-	imports = append(imports, moduleName+"/database")
-
-	isFirstTime := false
-	if _, err := os.Stat(projectDir + "/main.go"); os.IsNotExist(err) {
-		isFirstTime = true
-		if err := populateTemplate("templates/setup/main.gotpl", projectDir+"/main.go", SetupMainTemplateData{PackageName: "main", Imports: imports, FullSetup: false}); err != nil {
-			return false, err
-		}
-
-		if err := migrate(); err != nil {
-			return false, err
+	if _, err := os.Stat(projectDir + "/migrate/migrate.go"); os.IsNotExist(err) {
+		if err := populateTemplate("templates/setup/migrate.gotpl", projectDir+"/migrate/migrate.go", SetupMainTemplateData{PackageName: "database", Imports: imports, MigrationPath: c.MigrationDir}); err != nil {
+			return err
 		}
 	}
 
-	return isFirstTime, nil
+	return c.FullSetup(models)
 }
 
-func (c *GoSQLConfig) FullSetup(models []*Model, isFirstTime bool) error {
+func (c *GoSQLConfig) FullSetup(models []*Model) error {
 	if !c.SetupProject {
 		return nil
 	}
@@ -96,7 +85,7 @@ func (c *GoSQLConfig) FullSetup(models []*Model, isFirstTime bool) error {
 	imports = append(imports, moduleName+"/database")
 	imports = addImport(imports, moduleName+"/"+c.ControllerOutputDir)
 
-	if _, err := os.Stat(projectDir + "/main.go"); os.IsNotExist(err) || isFirstTime {
+	if _, err := os.Stat(projectDir + "/main.go"); os.IsNotExist(err) {
 		if err := populateTemplate("templates/setup/main.gotpl", projectDir+"/main.go", SetupMainTemplateData{PackageName: "main", Imports: imports, FullSetup: true, HasExtraMiddleWare: hasAuthUser && hasAuthOrganization && hasAuthOrganizationUser}); err != nil {
 			return err
 		}
@@ -106,12 +95,20 @@ func (c *GoSQLConfig) FullSetup(models []*Model, isFirstTime bool) error {
 }
 
 func migrate() error {
+	newDir, _ := os.Getwd()
+	os.Chdir(newDir + "/migrate")
+
 	goModTidy := exec.Command("/opt/homebrew/bin/go", []string{"mod", "tidy"}...)
 	err := goModTidy.Run()
 	if err != nil {
 		return err
 	}
 
-	cmd := exec.Command("/opt/homebrew/bin/go", []string{"run", "main.go", "--migrate"}...)
-	return cmd.Run()
+	cmd := exec.Command("/opt/homebrew/bin/go", []string{"run", "migrate.go"}...)
+	err = cmd.Run()
+	if err != nil {
+		return err
+	}
+
+	return os.Chdir(strings.TrimSuffix(newDir, "/migrate"))
 }

@@ -9,10 +9,8 @@ import (
 
 	_ "github.com/joho/godotenv/autoload"
 
-   	{{ if .FullSetup}}
-		"github.com/gin-gonic/gin"
-		"github.com/volatiletech/sqlboiler/v4/boil"
-	{{- end}}
+	"github.com/gin-gonic/gin"
+	"github.com/volatiletech/sqlboiler/v4/boil"
 
     {{- range .Imports }}
     "{{ . }}"
@@ -24,37 +22,23 @@ func init() {
 }
 
 func main() {
-    migrateFlag := flag.Bool("migrate", false, "Run database migrations")
-	flag.Parse()
+	boil.DebugMode = os.Getenv("GIN_MODE") == "debug"
 
-	if *migrateFlag {
-		err := database.Migrate()
-		if err != nil {
-			fmt.Println("ERR", err)
-			os.Exit(1)
-		}
-		return
+	db, err := database.NewClient()
+	if err != nil {
+		panic(err)
 	}
 
-	{{ if .FullSetup }}
-		boil.DebugMode = os.Getenv("GIN_MODE") == "debug"
-
-		db, err := database.NewClient()
-		if err != nil {
-			panic(err)
-		}
-
-		generated.RunApi(db, &generated.ApiConfig{
-			AllowOrigins:        []string{"*"},
-			{{- if .HasExtraMiddleWare}}
-				ExtraAuthMiddleware: auth.CallMiddleware,
-			{{- end}}
-			CustomRoutes: func(router *gin.Engine) *gin.Engine {
-				router.GET("/test", func(c *gin.Context) {
-					c.JSON(200, gin.H{"message": "test"})
-				})
-				return router
-			},
-		})
-	{{- end}}
+	generated.RunApi(db, &generated.ApiConfig{
+		AllowOrigins:        []string{"*"},
+		{{- if .HasExtraMiddleWare}}
+			ExtraAuthMiddleware: auth.CallMiddleware,
+		{{- end}}
+		CustomRoutes: func(router *gin.Engine) *gin.Engine {
+			router.GET("/test", func(c *gin.Context) {
+				c.JSON(200, gin.H{"message": "test"})
+			})
+			return router
+		},
+	})
 }

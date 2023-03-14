@@ -31,6 +31,11 @@ func Convert(c *GoSQLConfig) error {
 	var sqlType string
 	var models []*Model
 
+	err = os.RemoveAll(c.MigrationDir)
+	if err != nil {
+		return err
+	}
+
 	if _, err := os.Stat(c.MigrationDir); os.IsNotExist(err) {
 		fmt.Println("[1] -- No migration directory found")
 		if err := os.MkdirAll(c.MigrationDir, os.ModePerm); err != nil {
@@ -44,6 +49,7 @@ func Convert(c *GoSQLConfig) error {
 		}
 	} else {
 		fmt.Println("[1] -- Migration directory found")
+
 		for _, filePath := range files {
 			fileName := strings.TrimSuffix(strings.TrimPrefix(filePath, c.SchemeDir), ".gosql")
 			if _, err := os.Stat(c.MigrationDir + "/" + fileName + ".up.sql"); os.IsNotExist(err) {
@@ -64,6 +70,16 @@ func Convert(c *GoSQLConfig) error {
 	}
 
 	if len(newFiles) > 0 {
+		x, err := parseSqlBoilerConfig()
+		if err != nil {
+			return err
+		}
+
+		err = os.WriteFile(c.MigrationDir+"/1_migration.up.sql", []byte("DROP SCHEMA IF EXISTS "+x.Psql.DbName+" CASCADE; \n CREATE SCHEMA "+x.Psql.DbName+";"), 0644)
+		if err != nil {
+			return err
+		}
+
 		fmt.Println("[2] -- Found " + fmt.Sprint(len(newFiles)) + " files to convert")
 
 		for _, filePath := range newFiles {
@@ -87,9 +103,13 @@ func Convert(c *GoSQLConfig) error {
 	}
 
 	fmt.Println("[3] -- Setting up api & migrating (if needed)")
-	isFirstTime, err := c.InitialSetup(models)
+	err = c.InitialSetup(models)
 	if err != nil {
 		return fmt.Errorf("error setting up api: %v", err)
+	}
+
+	if err := migrate(); err != nil {
+		return err
 	}
 
 	fmt.Println("[4] -- Converting models")
@@ -113,11 +133,6 @@ func Convert(c *GoSQLConfig) error {
 		return fmt.Errorf("error running go mod tidy: %v", err)
 	}
 
-	fmt.Println("[8] -- Complete setup up")
-	if err := c.FullSetup(models, isFirstTime); err != nil {
-		return fmt.Errorf("error fully setting up api: %v", err)
-	}
-
-	fmt.Println("[9] -- Converted all files successfully")
+	fmt.Println("[8] -- Converted all files successfully")
 	return nil
 }
