@@ -37,6 +37,7 @@ import (
 		var queryMods []qm.QueryMod
 
 		{{ $relationName := .CamelName }}
+		{{ $relationSnakeName := .SnakeName }}
 		{{ range $relation := .Relations }}
 		if relations.{{ .Name }} != nil {
 			if len(loadFrom) > 0 {
@@ -75,6 +76,7 @@ import (
 
 				relationQueryMods = append(relationQueryMods, qm.Offset(page))
 				relationQueryMods = append(relationQueryMods, qm.Limit(limit))
+				relationQueryMods = append(relationQueryMods, qm.GroupBy("{{toSnake .SingularName}}.id, {{toSnake .SingularName}}.{{ $relationSnakeName}}_id"))
 				
 				queryMods = append(queryMods, qm.Load(loadFrom+"{{ .Name }}", relationQueryMods...))
 			{{- else }}

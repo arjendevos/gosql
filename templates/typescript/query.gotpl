@@ -102,29 +102,28 @@ export type Query<T> = T extends {{- range $controller := .Controllers }} {{.Cam
       order: null;
     };
 
-    export function query<T>({ filter, relations, order, select, from }: Query<T>) {
-      const queries: string[] = [];
-    
-      if (filter) {
-        queries.push("filter=" + encodeURIComponent(JSON.stringify(filter)));
-      }
-    
-      if (relations) {
-        queries.push("relations=" + encodeURIComponent(JSON.stringify(relations)));
-      }
-    
-      if (order) {
-        queries.push("order=" + encodeURIComponent(JSON.stringify(order)));
-      }
-    
-      if (select) {
-        queries.push("select=" + encodeURIComponent(JSON.stringify(select)));
-      }
-    
-      if (from) {
-        queries.push("from=" + encodeURIComponent(JSON.stringify(from)));
-      }
-    
-      return queries.join("&").replace("&", "?");
-    }
-    
+export function query<T>({ filter, relations, order, select, from }: Query<T>) {
+  const queries: string[] = [];
+
+  if (filter) {
+    queries.push("&filter=" + encodeURIComponent(JSON.stringify(filter)));
+  }
+
+  if (relations) {
+    queries.push("&rels=" + encodeURIComponent(JSON.stringify(relations)));
+  }
+
+  if (order) {
+    queries.push("&order=" + encodeURIComponent(JSON.stringify(order)));
+  }
+
+  if (select) {
+    queries.push("&select=" + encodeURIComponent(JSON.stringify(select)));
+  }
+
+  if (from) {
+    queries.push("&from=" + encodeURIComponent(JSON.stringify(from)));
+  }
+
+  return queries.join("").replace("&", "?");
+}

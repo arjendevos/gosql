@@ -70,12 +70,7 @@ func Convert(c *GoSQLConfig) error {
 	}
 
 	if len(newFiles) > 0 {
-		x, err := parseSqlBoilerConfig()
-		if err != nil {
-			return err
-		}
-
-		err = os.WriteFile(c.MigrationDir+"/1_migration.up.sql", []byte("DROP SCHEMA IF EXISTS "+x.Psql.DbName+" CASCADE; \n CREATE SCHEMA "+x.Psql.DbName+";"), 0644)
+		err = os.WriteFile(c.MigrationDir+"/1_migration.up.sql", []byte("DROP SCHEMA IF EXISTS public CASCADE; \n CREATE SCHEMA public;"), 0644)
 		if err != nil {
 			return err
 		}

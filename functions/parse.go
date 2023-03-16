@@ -346,7 +346,7 @@ func getTypescriptType(t string) string {
 	case "bool":
 		return "boolean"
 	case "dateTime":
-		return "Date"
+		return "string"
 	case "uint":
 		return "number"
 	default:

@@ -4,7 +4,8 @@ export function customFetch<T>(
   params: CustomFetchOptions
 ): Promise<Response<T>> {
   return new Promise((resolve, reject) => {
-    fetch(params.url, {
+    const queryParameters = params.query ? query(params.query) : "";
+    fetch(params.url + queryParameters, {
       method: params.method,
       headers: params.headers,
       body: JSON.stringify(params.body),
