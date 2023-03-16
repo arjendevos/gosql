@@ -70,11 +70,13 @@ export interface FilterValue {
         _limit?:number;
         _page?:number;
         _select? : {{ .CamelName }}Select;
+        _order? : {{ .CamelName }}Order;
       } : {
       {{- range $relation := .Relations}}
           {{ toSnake .Name }}?: {{ .SingularName }}Relations<{{- if .IsArray}}"array"{{- else}}"noArray"{{- end}}>;
       {{- end}}
        _select? : {{ .CamelName }}Select;
+       _order? : {{ .CamelName }}Order;
    }
 {{ end }}
 
