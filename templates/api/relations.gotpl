@@ -21,6 +21,7 @@ import (
         {{- end }}
 		*{{ .CamelName }}RelationPagination
 		SelectColumns []string `json:"_select"`
+		OrderColumns *{{.CamelName}}OrderColumns `json:"_order"`
     }
 
 	func parse{{ .CamelName }}Relations(relations string) (*{{ .CamelName }}Relations, error) {
@@ -50,6 +51,14 @@ import (
 					return nil, err
 				}
 				relationQueryMods = append(relationQueryMods, selectMods)
+			}
+
+			if relations.{{.Name}}.OrderColumns != nil {
+				orderMods ,err := parse{{.SingularName}}OrdersToMods(relations.{{.Name}}.OrderColumns)
+				if err != nil {
+					return nil, err
+				}
+				relationQueryMods = append(relationQueryMods, orderMods...)
 			}
 
 			{{- if .IsArray }}

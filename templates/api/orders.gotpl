@@ -11,7 +11,7 @@ import (
 
 	type {{ .CamelName }}OrderColumns struct {
 		{{ range $column := .Columns }}
-			{{ .CamelName }} *string `json:"{{ firstToLower .CamelName }}"`	
+			{{ .CamelName }} *string `json:"{{  .SnakeName }}"`	
 		{{- end }}
 	}
 
