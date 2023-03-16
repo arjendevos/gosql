@@ -122,7 +122,7 @@ You can create a relation by adding a column name (this should be the table name
 - [x] filter={"relationTable": {"column": {"equals":true}}} (filter on relation)
 - [x] rels={"relationTable":{}}
 - [x] rels={"relationTable":{"deeperRelation":{ etc... }}} (you can't call the parent relation in the child relation)
-- [x] rels={"relationTable":{"\_limit":4, "\_page":1}} (only for nToMany relations0
+- [x] rels={"relationTable":{"\_limit":4, "\_page":1}} (only for nToMany relations
 - [x] order={"column": "desc", "column":"asc"}
 - [x] from=organization | from=user | no parameter (organization = get by organization id, get = fetch by user id, no parameter = get by organization id & user id)
 - [x] select=["column"] (omitempty fixes this on the json side)

@@ -293,7 +293,22 @@ func (c *AuthController) Me(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, ResponseWithPayload(am.SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}(payload, nil), nil, nil, true))
+	{{- if and .HasOrganization .HasOrganizationUser}}
+		returnPayload := gin.H{
+			"account": am.SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}(payload, nil),
+			{{- range $jwt := .JWTFields }}
+				{{- if .IsFromOrganizationTable }}
+					"active_{{.SnakeName}}": ctx.Value("{{ .SnakeName }}"),
+				{{- end}}
+			{{- end }}
+		}
+	{{- else}}
+		returnPayload := gin.H{
+			"account": am.SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}(payload, nil),
+		}
+	{{- end}}
+
+	ctx.JSON(http.StatusOK, ResponseWithPayload(returnPayload, nil, nil, true))
 }
 
 {{ if and .HasOrganization .HasOrganizationUser}}

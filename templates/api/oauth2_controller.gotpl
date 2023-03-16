@@ -24,16 +24,18 @@ type Oauth2Controller struct {
     *Client
 }
 
-var googleOauth2Config = &oauth2.Config{
-    ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
-    ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
-    RedirectURL:  os.Getenv("API_DOMAIN") + "/oauth2/google/callback",
-    Scopes: []string{
-        "openid",
-        "profile",
-        "email",
-    },
-    Endpoint: google.Endpoint,
+func getGoogleOauth2Config() *oauth2.Config {
+	return &oauth2.Config{
+		ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
+		ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
+		RedirectURL:  os.Getenv("API_URL") + "/oauth2/google/callback",
+		Scopes: []string{
+			"openid",
+			"profile",
+			"email",
+		},
+		Endpoint: google.Endpoint,
+	}
 }
 
 type GoogleTokenInfo struct {
@@ -62,16 +64,16 @@ func (c *Oauth2Controller) Google(ctx *gin.Context) {
     state := GenerateRandomToken()
 
     ctx.SetSameSite(http.SameSiteLaxMode)
-	ctx.SetCookie("Oauth2State", state, 3600, "/", os.Getenv("APP_DOMAIN"), false, true)
+	ctx.SetCookie("Oauth2State", state, 3600, "/", os.Getenv("API_DOMAIN"), false, true)
 
-	ctx.Redirect(302, googleOauth2Config.AuthCodeURL(state))
+	ctx.Redirect(302, getGoogleOauth2Config().AuthCodeURL(state))
 }
 
 func (c *Oauth2Controller) GoogleCallback(ctx *gin.Context) {
     state, stateExists := ctx.GetQuery("state") // replace to get query exists
     code, codeExists := ctx.GetQuery("code")
 
-    redirectUri := os.Getenv("APP_DOMAIN")
+    redirectUri := os.Getenv("APP_URL")
 
     cookie, err := ctx.Cookie("Oauth2State")
     if err != nil {
@@ -84,7 +86,7 @@ func (c *Oauth2Controller) GoogleCallback(ctx *gin.Context) {
 		return
 	}
 
-	token, err := googleOauth2Config.Exchange(ctx, code)
+	token, err := getGoogleOauth2Config().Exchange(ctx, code)
 	if err != nil {
 		ctx.Redirect(302, redirectUri+"?error=invalid_request")
 		return

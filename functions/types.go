@@ -86,6 +86,12 @@ type TypescriptTypesTemplateData struct {
 	Controllers []*Model
 }
 
+type TypescriptTypesRelationsTemplateData struct {
+	Controllers           []*ModelWithRelations
+	AuthFields            []*JWTField
+	HasMultipleAuthFields bool
+}
+
 type SetupMainTemplateData struct {
 	PackageName        string
 	Imports            []string

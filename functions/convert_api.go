@@ -608,6 +608,26 @@ func parseTemplate(c *TemplateConfig, shouldFormat bool) (string, error) {
 		"isFalse": func(a bool) bool {
 			return !a
 		},
+		"authFromType": func(cl []*JWTField, cs []*Column) string {
+			var r = []string{}
+			for _, c := range cl {
+				if isAuthFieldInModel(cs, c) {
+					r = append(r, `"`+c.TableSnakeName+`"`)
+				}
+			}
+
+			return strings.Join(r, "|")
+		},
+		"stringArrayIsFilled": func(s string) bool {
+			return len(s) > 0
+		},
+		"typeArray": func(c []*Column) string {
+			var types = []string{}
+			for _, t := range c {
+				types = append(types, `"`+t.SnakeName+`"`)
+			}
+			return strings.Join(types, "|")
+		},
 		"everyRouteIsProtected": everyRouteIsProtected,
 		"isProtected": func(r []string, rn string) bool {
 			return stringArrayContains(r, rn)

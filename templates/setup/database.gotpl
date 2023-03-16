@@ -14,10 +14,19 @@ func NewClient() (*sql.DB, error) {
 		return nil, err
 	}
 
-	// err = seed(db)
-	// if err != nil {
-	// 	return nil, err
-	// }
+	seedFlag := flag.Bool("seed", false, "Seed the database")
+	flag.Parse()
+
+	if *seedFlag {
+		err = Seed(db)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	return db, nil
+}
+
+func seed(db *sql.DB) error {
+	return nil
 }

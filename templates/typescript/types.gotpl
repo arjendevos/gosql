@@ -10,16 +10,8 @@
 	}
 {{ end }}
 
-export interface Response<T> {
-	payload: T,
-	error: string,
-	message: string,
-	ok: boolean,
-}
-
-export interface CustomFetchOptions {
-    url: string,
-    method:  "GET" | "POST" | "PUT" | "DELETE" | "PATCH",
-    headers: Record<string, string>,
-    body: any,
+export interface Me {
+  account: Account;
+  active_organization_id?: number;
+  active_organization_workspace?: string;
 }

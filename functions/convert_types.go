@@ -24,7 +24,10 @@ func (c *GoSQLConfig) ConvertTypes(models []*Model) error {
 
 	pkgName := config.PkgName
 
+	var authQueryFields []*JWTField
 	var modelWithRelationsAndIds []*Model
+	var modelWithRelations []*ModelWithRelations
+
 	for _, model := range models {
 		fset := token.NewFileSet()
 		f, err := parser.ParseFile(fset, fmt.Sprintf("%s/%s.go", config.Output, model.SnakeName), nil, parser.AllErrors)
@@ -33,6 +36,7 @@ func (c *GoSQLConfig) ConvertTypes(models []*Model) error {
 		}
 
 		relations := getRelations(f, model, pkgName, models)
+		modelWithRelations = append(modelWithRelations, &ModelWithRelations{Model: model, Relations: relations})
 
 		var customColumns []*Column
 		for _, column := range model.Columns {
@@ -71,10 +75,54 @@ func (c *GoSQLConfig) ConvertTypes(models []*Model) error {
 			IsAuthOrganization:     model.IsAuthOrganization,
 			IsAuthOrganizationUser: model.IsAuthOrganizationUser,
 		})
+
+		if model.IsAuthUser {
+			for _, c := range model.Columns {
+				if c.SnakeName == "id" {
+					authQueryFields = append(authQueryFields, &JWTField{
+						CamelName:                   model.CamelName + c.CamelName,
+						SnakeName:                   model.SnakeName + "_" + c.SnakeName,
+						GoType:                      c.Type.GoTypeName,
+						NormalName:                  c.CamelName,
+						TableCamelName:              model.CamelName,
+						TableSnakeName:              model.SnakeName,
+						IsFromUserTable:             true,
+						IsFromOrganizationTable:     false,
+						IsFromOrganizationUserTable: false,
+					})
+				}
+			}
+		}
+
+		if model.IsAuthOrganization {
+			for _, c := range model.Columns {
+				if c.SnakeName == "id" {
+					authQueryFields = append(authQueryFields, &JWTField{
+						CamelName:                   model.CamelName + c.CamelName,
+						SnakeName:                   model.SnakeName + "_" + c.SnakeName,
+						GoType:                      c.Type.GoTypeName,
+						NormalName:                  c.CamelName,
+						TableCamelName:              model.CamelName,
+						TableSnakeName:              model.SnakeName,
+						IsFromUserTable:             false,
+						IsFromOrganizationTable:     true,
+						IsFromOrganizationUserTable: false,
+					})
+				}
+			}
+		}
 	}
 
 	if err := populateTemplate("templates/typescript/types.gotpl", outputDir+"/types.ts", TypescriptTypesTemplateData{
 		Controllers: modelWithRelationsAndIds,
+	}); err != nil {
+		return err
+	}
+
+	if err := populateTemplate("templates/typescript/query.gotpl", outputDir+"/query.ts", TypescriptTypesRelationsTemplateData{
+		Controllers:           modelWithRelations,
+		AuthFields:            authQueryFields,
+		HasMultipleAuthFields: len(authQueryFields) > 0,
 	}); err != nil {
 		return err
 	}
