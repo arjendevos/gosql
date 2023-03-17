@@ -4,7 +4,7 @@ import { {{- range $controller := .Controllers}}{{.CamelName}}, {{- end}} } from
 
 export interface Pagination {
   limit: number;
-  page: number;
+  cursor: string;
 }
 
 export interface FilterValue {
@@ -71,12 +71,12 @@ export interface FilterValue {
         _page?:number;
         _select? : {{ .CamelName }}Select;
         _order? : {{ .CamelName }}Order;
+        _where?:{{ .CamelName }}Filter;
       } : {
       {{- range $relation := .Relations}}
           {{ toSnake .Name }}?: {{ .SingularName }}Relations<{{- if .IsArray}}"array"{{- else}}"noArray"{{- end}}>;
       {{- end}}
        _select? : {{ .CamelName }}Select;
-       _order? : {{ .CamelName }}Order;
    }
 {{ end }}
 
@@ -104,7 +104,7 @@ export type Query<T> = T extends {{- range $controller := .Controllers }} {{.Cam
       pagination?:null
     };
 
-export function query<T>({ filter, relations, order, select, from,pagination }: Query<T>) {
+export function query<T>({ filter, relations, order, select, from, pagination }: Query<T>) {
   const queries: string[] = [];
 
   if (filter) {
@@ -128,7 +128,11 @@ export function query<T>({ filter, relations, order, select, from,pagination }: 
   }
 
   if (pagination) {
-    queries.push("&limit=" + pagination.limit + "&page=" + pagination.page);
+    queries.push("&limit=" + pagination.limit );
+
+    if (pagination.cursor) {
+      queries.push("&cursor=" + pagination.cursor);
+    }
   }
 
   return queries.join("").replace("&", "?");

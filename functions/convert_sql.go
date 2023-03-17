@@ -53,6 +53,9 @@ func (c *GoSQLConfig) ConvertToSql(fileName, t string, models []*Model, existing
 		var fk = 1
 		var idx = 1
 
+		var hasUUID bool
+		var hasCreatedAt bool
+
 		tableName := strings.ToLower(m.SnakeName)
 		file.WriteString("CREATE TABLE " + tableName + " (\n")
 		for _, c := range m.Columns {
@@ -69,6 +72,14 @@ func (c *GoSQLConfig) ConvertToSql(fileName, t string, models []*Model, existing
 				}
 				constraints = append(constraints, constraint)
 			})
+
+			if c.Type.Name == "uuid" {
+				hasUUID = true
+			}
+
+			if c.SnakeName == "created_at" {
+				hasCreatedAt = true
+			}
 
 			if isRelation {
 				// Check if exists in models
@@ -141,6 +152,11 @@ func (c *GoSQLConfig) ConvertToSql(fileName, t string, models []*Model, existing
 
 			file.WriteString(line)
 			file.WriteString(",\n")
+		}
+
+		if hasCreatedAt && hasUUID {
+			indexes = append(indexes, fmt.Sprintf("CREATE INDEX %v_idx_%v_%v_%v ON %v (created_at, uuid)", tableName, idx, "created_at", "id", tableName))
+			idx++
 		}
 
 		for i, constraint := range constraints {

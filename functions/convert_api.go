@@ -745,6 +745,17 @@ func parseTemplate(c *TemplateConfig, shouldFormat bool) (string, error) {
 
 			return false
 		},
+		"hasUniqueColumns": func(cs []*Column) bool {
+			for _, c := range cs {
+				for _, attr := range c.Attributes {
+					if attr.Name == "unique" {
+						return true
+					}
+				}
+			}
+
+			return false
+		},
 		"isNullableDBType": func(c *Column) bool {
 			if c.Type.IsNullable {
 				return true

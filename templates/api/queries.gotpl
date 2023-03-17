@@ -9,18 +9,22 @@ import (
 	"strings"
 	"errors"
 	"encoding/base64"
+	"time"
+
 )
 
 {{ $authFields := .AuthFields }}
 {{ $hasMultipleAuthFields := .HasMultipleAuthFields }}
 
 type Cursor struct {
-	IsPrevious bool `json:"is_previous"`
-	IsNext bool `json:"is_next"`
-	Cursor string `json:"cursor"`
+	IsPrevious bool   `json:"is_previous"`
+	IsNext     bool   `json:"is_next"`
+	ID     string `json:"cursor"`
+	CreatedAt string `json:"created_at"`
 }
 
-const CURSOR_SPLITTER = "_***__***_"
+const DIRECTION_SPLITTER = "_____"
+const CURSOR_SPLITTER = "_*_*_*_*_*_"
 
 func parseCursor(rawCursor string) (*Cursor, error) {
 	rawCursor, err := base64DecodeCursor(rawCursor)
@@ -28,42 +32,46 @@ func parseCursor(rawCursor string) (*Cursor, error) {
 		return nil, err
 	}
 
-	if strings.HasPrefix(rawCursor, "prev"+CURSOR_SPLITTER) {
-		cursor := strings.TrimPrefix(rawCursor, "prev"+CURSOR_SPLITTER)
+	if strings.HasPrefix(rawCursor, "prev"+DIRECTION_SPLITTER) {
+		cursor := strings.TrimPrefix(rawCursor, "prev"+DIRECTION_SPLITTER)
+		s := strings.Split(cursor, CURSOR_SPLITTER)
 		return &Cursor{
 			IsPrevious: true,
-			IsNext: false,
-			Cursor: cursor,
+			IsNext:     false,
+			ID:    s[0],
+			CreatedAt: s[1],
 		}, nil
 	}
 
-	if strings.HasPrefix(rawCursor, "next"+CURSOR_SPLITTER) {
-		cursor := strings.TrimPrefix(rawCursor, "next"+CURSOR_SPLITTER)
+	if strings.HasPrefix(rawCursor, "next"+DIRECTION_SPLITTER) {
+		cursor := strings.TrimPrefix(rawCursor, "next"+DIRECTION_SPLITTER)
+		s := strings.Split(cursor, CURSOR_SPLITTER)
 		return &Cursor{
 			IsPrevious: false,
-			IsNext: true,
-			Cursor: cursor,
+			IsNext:     true,
+			ID:    s[0],
+			CreatedAt: s[1],
 		}, nil
 	}
 
 	return nil, errors.New("invalid cursor")
 }
 
-func GenerateNextPageCursor(id *string) *string {
-	if id == nil {
+func GenerateNextPageCursor(id *string, created_at *time.Time) *string {
+	if id == nil || created_at == nil{
 		return nil
 	}
 
-	c := base64EncodeCursor("next" + CURSOR_SPLITTER + *id)
+	c := base64EncodeCursor("next" + DIRECTION_SPLITTER + *id +CURSOR_SPLITTER + created_at.UTC().Format("2006-01-02 15:04:05.999999-07"))
 	return &c
 }
 
-func GeneratePrevPageCursor(id *string) *string {
-	if id == nil {
+func GeneratePrevPageCursor(id *string, created_at *time.Time) *string {
+	if id == nil || created_at == nil {
 		return nil
 	}
 
-	c := base64EncodeCursor("prev" + CURSOR_SPLITTER + *id)
+	c := base64EncodeCursor("prev" + DIRECTION_SPLITTER + *id+CURSOR_SPLITTER + created_at.UTC().Format("2006-01-02 15:04:05.999999-07"))
 	return &c
 }
 
@@ -205,15 +213,29 @@ func base64EncodeCursor(cleanCursor string) string {
 		
 		if query.Cursor != nil {
 			if query.Cursor.IsPrevious {
-				queryMods = append(queryMods, qm.Expr(qm.Where("id > ?", query.Cursor.Cursor), qm.OrderBy("id ASC")))
+				queryMods = append(queryMods, qm.Expr(
+					qm.Where("{{.SnakeName}}.created_at >= ?", query.Cursor.CreatedAt), 
+					qm.Expr(
+						qm.Where("{{.SnakeName}}.created_at > ?", query.Cursor.CreatedAt), 
+						qm.Or2(qm.Where("{{.SnakeName}}.id > ?", query.Cursor.ID)),
+					), 
+					// qm.OrderBy("{{.SnakeName}}.created_at, {{.SnakeName}}.id ASC"),
+				))
 			}
 
 			if query.Cursor.IsNext {
-				queryMods = append(queryMods, qm.Expr(qm.Where("id < ?", query.Cursor.Cursor), qm.OrderBy("id DESC")))
+				queryMods = append(queryMods, qm.Expr(
+					qm.Where("{{.SnakeName}}.created_at <= ?", query.Cursor.CreatedAt), 
+					qm.Expr(
+						qm.Where("{{.SnakeName}}.created_at < ?", query.Cursor.CreatedAt), 
+						qm.Or2(qm.Where("{{.SnakeName}}.id < ?", query.Cursor.ID)),
+					), 
+					// qm.OrderBy("{{.SnakeName}}.created_at, {{.SnakeName}}.id ASC"),
+				))
 			}
-		} else {
-			queryMods = append(queryMods, qm.OrderBy("id DESC"))
-		}
+		} 
+
+		queryMods = append(queryMods, qm.OrderBy("{{.SnakeName}}.created_at, {{.SnakeName}}.id DESC"))
 
 		// queryMods = append(queryMods, qm.Offset(query.Page))
 		queryMods = append(queryMods, qm.Limit(query.Limit+1))
@@ -244,17 +266,17 @@ func base64EncodeCursor(cleanCursor string) string {
 
 	func Parse{{ .CamelName }}ByIDParamToMods(context *gin.Context) ([]qm.QueryMod, error) {
 		id := context.Param("id")
-		idInInt, err := strconv.Atoi(id)
-		if err != nil {
-			return nil, err
-		}
+		// idInInt, err := strconv.Atoi(id)
+		// if err != nil {
+		// 	return nil, err
+		// }
 
 		queryMods, err := parse{{ .CamelName }}QueryToMods(context, 1)
 		if err != nil {
 			return nil, err
 		}
 
-		return append(queryMods, []qm.QueryMod{qm.Where("id = ?", idInInt)}...), nil
+		return append(queryMods, []qm.QueryMod{qm.Where("{{.SnakeName}}.id = ?", id)}...), nil
 	}
 
 	{{ if $hasMultipleAuthFields }} 

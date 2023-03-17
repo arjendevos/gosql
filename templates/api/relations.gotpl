@@ -17,11 +17,12 @@ import (
 
     type {{ .CamelName}}Relations struct {
         {{ range $relation := .Relations }}
-			{{ .Name }} *{{.SingularName}}Relations `boil:"{{ firstToLower .Name }}" json:"{{ firstToLower .Name}}" toml:"{{ firstToLower .Name}}" yaml:"{{ firstToLower .Name}}"`
+			{{ .Name }} *{{.SingularName}}Relations `boil:"{{ toSnake .Name }}" json:"{{ toSnake .Name }}" toml:"{{ toSnake .Name }}" yaml:"{{ toSnake .Name }}"`
         {{- end }}
 		*{{ .CamelName }}RelationPagination
 		SelectColumns []string `json:"_select"`
 		OrderColumns *{{.CamelName}}OrderColumns `json:"_order"`
+		WhereColumns *{{.CamelName }}Filter `json:"_where"`
     }
 
 	func parse{{ .CamelName }}Relations(relations string) (*{{ .CamelName }}Relations, error) {
@@ -54,6 +55,14 @@ import (
 				relationQueryMods = append(relationQueryMods, selectMods)
 			}
 
+			if relations.{{.Name}}.WhereColumns != nil {
+				whereMods, err := parse{{.SingularName}}FilterToMods(relations.{{.Name}}.WhereColumns, "{{toSnake .SingularName}}.")
+				if err != nil {
+					return nil, err
+				}
+				relationQueryMods = append(relationQueryMods,  qm.Expr(whereMods...))
+			}
+
 			if relations.{{.Name}}.OrderColumns != nil {
 				orderMods ,err := parse{{.SingularName}}OrdersToMods(relations.{{.Name}}.OrderColumns)
 				if err != nil {
@@ -71,7 +80,7 @@ import (
 				if relations.{{ .Name }}.{{ .SingularName }}RelationPagination != nil {
 					if relations.{{ .Name }}.LimitPagination > 0 {
 						limit = relations.{{ .Name }}.LimitPagination
-						if limit < 25 {
+						if limit > 25 {
 							limit = 25
 						}
 					}

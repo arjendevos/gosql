@@ -8,7 +8,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/volatiletech/sqlboiler/v4/boil"
+	{{- if hasUniqueColumns .CreateColumns}}
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
+	{{- end}}
 
 
 {{ range $v := .Imports }}
@@ -48,11 +50,11 @@ func (c *{{ .CamelName}}Controller) List(ctx *gin.Context) {
 	}
 
 	if pagination.HasNextPage {
-		pagination.NextPageCursor = GenerateNextPageCursor(&payload[len(payload)-2].ID)
+		pagination.NextPageCursor = GenerateNextPageCursor(&payload[len(payload)-2].ID, &payload[len(payload)-2].CreatedAt)
 	}
 
 	if pagination.HasPrevPage && len(payload) > 0 {
-		pagination.PrevPageCursor = GeneratePrevPageCursor(&payload[0].ID)
+		pagination.PrevPageCursor = GeneratePrevPageCursor(&payload[0].ID, &payload[0].CreatedAt)
 	}
 
 	tillSliceValue := len(payload)
@@ -99,32 +101,36 @@ func (c *{{ .CamelName}}Controller) Create(ctx *gin.Context) {
 		return
 	}
 
-	var queryMods []qm.QueryMod
-	// We don't use the authQueryMods here because we do that in CreateBody
+	{{- if hasUniqueColumns .CreateColumns}}
+		var queryMods []qm.QueryMod
+		// We don't use the authQueryMods here because we do that in CreateBody
 
-	{{- $controller := .}}
-	{{- $controllerCamelName := .CamelName}}
-	{{- range $column := .CreateColumns }}
-		{{- if isUnique . }}
-			{{- if isNotFirstUnique $controller.CreateColumns $column }}
-				queryMods = append(queryMods, qm.Or2(dm.{{ $controllerCamelName }}Where.{{ .CamelName }}.EQ(body.{{ .CamelName }})))
-			{{- else }}
-				queryMods = append(queryMods, dm.{{ $controllerCamelName }}Where.{{ .CamelName }}.EQ(body.{{ .CamelName }}))
+		{{- $controller := .}}
+		{{- $controllerCamelName := .CamelName}}
+		{{- range $column := .CreateColumns }}
+			{{- if isUnique . }}
+				{{- if isNotFirstUnique $controller.CreateColumns $column }}
+					queryMods = append(queryMods, qm.Or2(dm.{{ $controllerCamelName }}Where.{{ .CamelName }}.EQ(body.{{ .CamelName }})))
+				{{- else }}
+					queryMods = append(queryMods, dm.{{ $controllerCamelName }}Where.{{ .CamelName }}.EQ(body.{{ .CamelName }}))
+				{{- end}}
 			{{- end}}
 		{{- end}}
-	{{- end}}
 
-	if len(queryMods) > 0 {
-		count, err := dm.{{pluralize .CamelName}}(queryMods...).Count(ctx, c.db)
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "invalid_request", "Invalid request", false, nil))
-			return
+		if len(queryMods) > 0 {
+			count, err := dm.{{pluralize .CamelName}}(queryMods...).Count(ctx, c.db)
+			if err != nil && !errors.Is(err, sql.ErrNoRows) {
+				ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "invalid_request", "Invalid request", false, nil))
+				return
+			}
+			if count > 0 {
+				ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "duplicate", "{{.CamelName}} already exists", false, nil))
+				return
+			}
 		}
-		if count > 0 {
-			ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "duplicate", "{{.CamelName}} already exists", false, nil))
-			return
-		}
-	}
+	{{- end }}
+
+	
 
 	model := {{ .CamelName}}CreateBodyToSqlBoiler(ctx, body)
 	err = model.Insert(ctx, c.db, boil.Infer())
