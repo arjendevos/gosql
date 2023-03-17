@@ -6,10 +6,79 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
+	"strings"
+	"errors"
+	"encoding/base64"
 )
 
 {{ $authFields := .AuthFields }}
 {{ $hasMultipleAuthFields := .HasMultipleAuthFields }}
+
+type Cursor struct {
+	IsPrevious bool `json:"is_previous"`
+	IsNext bool `json:"is_next"`
+	Cursor string `json:"cursor"`
+}
+
+const CURSOR_SPLITTER = "_***__***_"
+
+func parseCursor(rawCursor string) (*Cursor, error) {
+	rawCursor, err := base64DecodeCursor(rawCursor)
+	if err != nil {
+		return nil, err
+	}
+
+	if strings.HasPrefix(rawCursor, "prev"+CURSOR_SPLITTER) {
+		cursor := strings.TrimPrefix(rawCursor, "prev"+CURSOR_SPLITTER)
+		return &Cursor{
+			IsPrevious: true,
+			IsNext: false,
+			Cursor: cursor,
+		}, nil
+	}
+
+	if strings.HasPrefix(rawCursor, "next"+CURSOR_SPLITTER) {
+		cursor := strings.TrimPrefix(rawCursor, "next"+CURSOR_SPLITTER)
+		return &Cursor{
+			IsPrevious: false,
+			IsNext: true,
+			Cursor: cursor,
+		}, nil
+	}
+
+	return nil, errors.New("invalid cursor")
+}
+
+func GenerateNextPageCursor(id *string) *string {
+	if id == nil {
+		return nil
+	}
+
+	c := base64EncodeCursor("next" + CURSOR_SPLITTER + *id)
+	return &c
+}
+
+func GeneratePrevPageCursor(id *string) *string {
+	if id == nil {
+		return nil
+	}
+
+	c := base64EncodeCursor("prev" + CURSOR_SPLITTER + *id)
+	return &c
+}
+
+func base64DecodeCursor(rawCursor string) (string, error) {
+	b, err:= base64.StdEncoding.DecodeString(rawCursor)
+	if err != nil {
+			return "", err
+	}
+	return string(b), nil
+}
+
+
+func base64EncodeCursor(cleanCursor string) string {
+	return base64.StdEncoding.EncodeToString([]byte(cleanCursor))
+}
 
 {{ range $controller := .Controllers }}
 	{{ $columns := .Columns }}
@@ -39,7 +108,7 @@ import (
 		}, nil
 	}
 
-	func parse{{ .CamelName }}QueryToMods(context *gin.Context) ([]qm.QueryMod, error) {
+	func parse{{ .CamelName }}QueryToMods(context *gin.Context, parentLimit int) ([]qm.QueryMod, error) {
 		query, err := parse{{ .CamelName }}Query(context)
 		if err != nil {
 			return nil, err
@@ -48,7 +117,7 @@ import (
 		var queryMods []qm.QueryMod
 
 		if query.Relations != nil {
-			relationQueryMods, err := parse{{ .CamelName }}RelationsToMods(query.Relations, "")
+			relationQueryMods, err := parse{{ .CamelName }}RelationsToMods(query.Relations, "", parentLimit)
 			if err != nil {
 				return nil, err
 			}
@@ -66,18 +135,23 @@ import (
 		return queryMods, nil
 	}
 
+	
+
 	type {{ .CamelName }}ListQuery struct {
 		Page   int    `json:"page"`
 		Limit  int    `json:"limit"`
+		Cursor *Cursor `json:"cursor"`
 		Filter *{{ .CamelName }}Filter `json:"filter"`
 		Orders *{{ .CamelName }}OrderColumns `json:"orders"`
 	}
-
+	
 	func parse{{ .CamelName }}ListQuery(context *gin.Context) (*{{ .CamelName }}ListQuery, error) {
 		page := context.DefaultQuery("page", "0")
 		limit := context.DefaultQuery("limit", "10")
 		filter := context.DefaultQuery("filter", "{}")
 		orders := context.DefaultQuery("order", "{}")
+		rawCursor, hasCursor := context.GetQuery("cursor")
+
 
 		f, err := parse{{ .CamelName }}Filter(filter)
 		if err != nil {
@@ -103,29 +177,51 @@ import (
 			limitInInt = 25
 		}
 
+		var cursor *Cursor
+		if hasCursor {
+			var err error
+			cursor, err = parseCursor(rawCursor)
+			if err != nil{
+				return nil, err
+			}
+		}
+
 		return &{{ .CamelName }}ListQuery{
 			Page:   pageInInt,
 			Limit:  limitInInt,
 			Filter: f,
 			Orders: o,
+			Cursor: cursor,
 		}, nil
 	}
 
-	func Parse{{ .CamelName }}ListQueryToMods(context *gin.Context) ([]qm.QueryMod, error) {
+	func Parse{{ .CamelName }}ListQueryToMods(context *gin.Context) ([]qm.QueryMod, *{{.CamelName}}ListQuery, error) {
 		query, err := parse{{ .CamelName }}ListQuery(context)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		var queryMods []qm.QueryMod
+		
+		if query.Cursor != nil {
+			if query.Cursor.IsPrevious {
+				queryMods = append(queryMods, qm.Expr(qm.Where("id > ?", query.Cursor.Cursor), qm.OrderBy("id ASC")))
+			}
 
-		queryMods = append(queryMods, qm.Offset(query.Page))
-		queryMods = append(queryMods, qm.Limit(query.Limit))
+			if query.Cursor.IsNext {
+				queryMods = append(queryMods, qm.Expr(qm.Where("id < ?", query.Cursor.Cursor), qm.OrderBy("id DESC")))
+			}
+		} else {
+			queryMods = append(queryMods, qm.OrderBy("id DESC"))
+		}
 
+		// queryMods = append(queryMods, qm.Offset(query.Page))
+		queryMods = append(queryMods, qm.Limit(query.Limit+1))
+		
 		if query.Filter != nil {
 			filterQueryMods, err := parse{{ .CamelName }}FilterToMods(query.Filter, "")
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			queryMods = append(queryMods, filterQueryMods...)
 		}
@@ -133,17 +229,17 @@ import (
 		if query.Orders != nil {
 			ordersQueryMods, err := parse{{ .CamelName }}OrdersToMods(query.Orders)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			queryMods = append(queryMods, ordersQueryMods...)
 		}
 
-		extraMods,err := parse{{ .CamelName }}QueryToMods(context)
+		extraMods,err := parse{{ .CamelName }}QueryToMods(context, query.Limit)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
-		return append(queryMods, extraMods...), nil
+		return append(queryMods, extraMods...), query, nil
 	}
 
 	func Parse{{ .CamelName }}ByIDParamToMods(context *gin.Context) ([]qm.QueryMod, error) {
@@ -153,7 +249,7 @@ import (
 			return nil, err
 		}
 
-		queryMods, err := parse{{ .CamelName }}QueryToMods(context)
+		queryMods, err := parse{{ .CamelName }}QueryToMods(context, 1)
 		if err != nil {
 			return nil, err
 		}

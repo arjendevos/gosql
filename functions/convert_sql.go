@@ -196,7 +196,7 @@ func convertType(tableName string, c *Column, cb func(constraint string)) (typeN
 	case "bool":
 		return "BOOLEAN", false, false
 	case "dateTime":
-		return "TIMESTAMP", false, false
+		return "TIMESTAMPTZ", false, false
 	case "uuid":
 		return "UUID", false, false
 	case "uint":

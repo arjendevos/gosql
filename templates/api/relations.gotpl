@@ -33,7 +33,7 @@ import (
 		return &relationsValue, nil
 	}
 
-	func parse{{ .CamelName}}RelationsToMods(relations *{{ .CamelName}}Relations, loadFrom string) ([]qm.QueryMod, error) {
+	func parse{{ .CamelName}}RelationsToMods(relations *{{ .CamelName}}Relations, loadFrom string, parentLimit int) ([]qm.QueryMod, error) {
 		var queryMods []qm.QueryMod
 
 		{{ $relationName := .CamelName }}
@@ -64,10 +64,16 @@ import (
 
 			{{- if .IsArray }}
 				limit := 10
+				if parentLimit > 10 {
+					limit = parentLimit
+				}
 				page := 0
 				if relations.{{ .Name }}.{{ .SingularName }}RelationPagination != nil {
 					if relations.{{ .Name }}.LimitPagination > 0 {
 						limit = relations.{{ .Name }}.LimitPagination
+						if limit < 25 {
+							limit = 25
+						}
 					}
 					if relations.{{ .Name }}.PagePagination > 0 {
 						page = relations.{{ .Name }}.PagePagination
@@ -83,7 +89,7 @@ import (
 				queryMods = append(queryMods, qm.Load(loadFrom+"{{ .Name }}", relationQueryMods...))
 			{{- end}}
 			
-			deeperQueryMods, err := parse{{.SingularName}}RelationsToMods(relations.{{ .Name }}, loadFrom +"{{.Name}}")
+			deeperQueryMods, err := parse{{.SingularName}}RelationsToMods(relations.{{ .Name }}, loadFrom +"{{.Name}}", {{- if .IsArray }} limit {{- else }} parentLimit {{- end}})
 			if err != nil {
 				return nil, err
 			}

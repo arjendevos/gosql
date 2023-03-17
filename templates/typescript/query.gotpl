@@ -93,16 +93,18 @@ export type Query<T> = T extends {{- range $controller := .Controllers }} {{.Cam
       order?: Order<T[0]>;
       select?: Select<T[0]>;
       from?: From<T[0]>;
+      pagination?:Pagination
     }
   : {
       relations?: Relations<T>;
       select?: Select<T>;
       from?: From<T>;
-      filter: null;
-      order: null;
+      filter?: null;
+      order?: null;
+      pagination?:null
     };
 
-export function query<T>({ filter, relations, order, select, from }: Query<T>) {
+export function query<T>({ filter, relations, order, select, from,pagination }: Query<T>) {
   const queries: string[] = [];
 
   if (filter) {
@@ -123,6 +125,10 @@ export function query<T>({ filter, relations, order, select, from }: Query<T>) {
 
   if (from) {
     queries.push("&from=" + encodeURIComponent(JSON.stringify(from)));
+  }
+
+  if (pagination) {
+    queries.push("&limit=" + pagination.limit + "&page=" + pagination.page);
   }
 
   return queries.join("").replace("&", "?");

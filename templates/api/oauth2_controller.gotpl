@@ -130,7 +130,7 @@ func (c *Oauth2Controller) GoogleCallback(ctx *gin.Context) {
 
 		tokenString, err := GenerateJWT(jwtPayload)
 		if err != nil {
-			ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "invalid_request", "Invalid request", false))
+			ctx.Redirect(302, redirectUri+"?error=invalid_request")
 			return
 		}
 
@@ -201,7 +201,7 @@ func (c *Oauth2Controller) GoogleCallback(ctx *gin.Context) {
 
 	tokenString, err := GenerateJWT(jwtPayload)
 	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "invalid_request", "Invalid request", false))
+		ctx.Redirect(302, redirectUri+"?success=true&new_user=false")
 		return
 	}
 

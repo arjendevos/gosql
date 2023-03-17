@@ -19,7 +19,15 @@ import (
 	"gopkg.in/validator.v2"
 )
 
-func ResponseWithPayload(payload interface{}, errCode, message interface{}, ok bool) gin.H {
+type Pagination struct {
+	HasNextPage bool `json:"has_next_page"`
+	NextPageCursor *string `json:"next_page_cursor"`
+	HasPrevPage bool `json:"has_prev_page"`
+	PrevPageCursor *string `json:"prev_page_cursor"`
+}
+
+
+func ResponseWithPayload(payload interface{}, errCode, message interface{}, ok bool, pagination *Pagination) gin.H {
 	var m interface{}
 	var e interface{}
 
@@ -31,7 +39,7 @@ func ResponseWithPayload(payload interface{}, errCode, message interface{}, ok b
 		m = message
 	}
 
-	return gin.H{"payload": payload, "error": e, "message": m, "ok": ok}
+	return gin.H{"payload": payload, "error": e, "message": m, "ok": ok, "pagination": pagination}
 }
 
 func BindAndValidateJSON(context *gin.Context, obj interface{}) error {

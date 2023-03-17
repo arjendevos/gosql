@@ -15,20 +15,20 @@ func AuthMiddleware(extraAuthMiddleware func (gin *gin.Context)) gin.HandlerFunc
 
 		tokenString, err = c.Cookie("Authorization")
 		if err != nil && err != http.ErrNoCookie {
-			c.AbortWithStatusJSON(401, ResponseWithPayload(nil, "unauthenticated", "You are unauthenticated", false))
+			c.AbortWithStatusJSON(401, ResponseWithPayload(nil, "unauthenticated", "You are unauthenticated", false, nil))
 			return
 		}
 
 		if err != nil && err == http.ErrNoCookie {
 			headerValue := c.GetHeader("Authorization")
 			if !strings.Contains(headerValue, "Bearer") {
-				c.AbortWithStatusJSON(403, ResponseWithPayload(nil, "unauthenticated", "You are unauthenticated", false))
+				c.AbortWithStatusJSON(403, ResponseWithPayload(nil, "unauthenticated", "You are unauthenticated", false, nil))
 				return
 			}
 			headerValueSplitted := strings.Split(headerValue, "Bearer ")
 			tokenString = headerValueSplitted[1]
 			if tokenString == "" {
-				c.AbortWithStatusJSON(403, ResponseWithPayload(nil, "unauthenticated", "You are unauthenticated", false))
+				c.AbortWithStatusJSON(403, ResponseWithPayload(nil, "unauthenticated", "You are unauthenticated", false, nil))
 				c.Abort()
 				return
 			}
@@ -36,7 +36,7 @@ func AuthMiddleware(extraAuthMiddleware func (gin *gin.Context)) gin.HandlerFunc
 
 		value, err := ValidateToken(tokenString)
 		if err != nil {
-			c.AbortWithStatusJSON(403, ResponseWithPayload(nil, "unauthenticated", "You are unauthenticated", false))
+			c.AbortWithStatusJSON(403, ResponseWithPayload(nil, "unauthenticated", "You are unauthenticated", false, nil))
 			return
 		}
 

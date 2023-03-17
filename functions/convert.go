@@ -70,7 +70,7 @@ func Convert(c *GoSQLConfig) error {
 	}
 
 	if len(newFiles) > 0 {
-		err = os.WriteFile(c.MigrationDir+"/1_migration.up.sql", []byte("DROP SCHEMA IF EXISTS public CASCADE; \n CREATE SCHEMA public;"), 0644)
+		err = os.WriteFile(c.MigrationDir+"/1_migration.up.sql", []byte("DROP SCHEMA IF EXISTS public CASCADE; \nCREATE SCHEMA public; CREATE table schema_migrations (version varchar(255) NOT NULL,\ndirty boolean NOT NULL DEFAULT false,\nPRIMARY KEY (version));"), 0644)
 		if err != nil {
 			return err
 		}
