@@ -40,7 +40,7 @@ func RunApi(db *sql.DB, c *ApiConfig) {
         authGroup := router.Group("/auth")
         authGroup.POST("/signin", controllers.Auth.SignIn)
         authGroup.POST("/signup", controllers.Auth.SignUp)
-        authGroup.POST("/signout", controllers.Auth.SignOut)
+        authGroup.Use(AuthMiddleware(c.ExtraAuthMiddleware)).POST("/signout", controllers.Auth.SignOut)
         authGroup.Use(AuthMiddleware(c.ExtraAuthMiddleware)).GET("/me", controllers.Auth.Me)
         {{- if .HasOrganization }}
         authGroup.Use(AuthMiddleware(c.ExtraAuthMiddleware)).POST("/switch", controllers.Auth.SwitchOrganization)

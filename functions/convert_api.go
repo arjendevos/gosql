@@ -86,14 +86,19 @@ func (c *GoSQLConfig) ConvertApiModels(models []*Model) error {
 				}
 
 				columnsWithRelationsAsIDs = append(columnsWithRelationsAsIDs, &Column{
-					SnakeName:  cl.SnakeName + "_id",
-					CamelName:  cl.CamelName + "ID",
-					Type:       &t,
-					Attributes: cl.Attributes,
-					IsRelation: true,
-					Expose:     true,
+					SnakeName:    cl.SnakeName + "_id",
+					CamelName:    cl.CamelName + "ID",
+					Type:         &t,
+					Attributes:   cl.Attributes,
+					IsRelation:   true,
+					Expose:       true,
+					DatabaseName: cl.DatabaseName,
 				})
 			}
+		}
+
+		for _, x := range relations {
+			fmt.Println("x", x.Type)
 		}
 
 		if err := populateTemplate("templates/model/model.gotpl", outputDir+"/"+m.SnakeName+".go", ModelTemplateData{
@@ -208,12 +213,13 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 				}
 
 				columnsWithRelationsAsIDs = append(columnsWithRelationsAsIDs, &Column{
-					SnakeName:  c.SnakeName + "_id",
-					CamelName:  c.CamelName + "ID",
-					Type:       &t,
-					Attributes: c.Attributes,
-					IsRelation: true,
-					Expose:     true,
+					SnakeName:    c.SnakeName + "_id",
+					CamelName:    c.CamelName + "ID",
+					Type:         &t,
+					Attributes:   c.Attributes,
+					IsRelation:   true,
+					Expose:       true,
+					DatabaseName: c.DatabaseName,
 				})
 			}
 
@@ -231,6 +237,9 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 			IsAuthOrganization:     m.IsAuthOrganization,
 			ProtectedRoutes:        m.ProtectedRoutes,
 			IsAuthOrganizationUser: m.IsAuthOrganizationUser,
+			HideRoutes:             m.HideRoutes,
+			Hide:                   m.Hide,
+			Oauth2:                 m.Oauth2,
 		})
 
 		if m.IsAuthUser {
@@ -376,7 +385,7 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 		return err
 	}
 
-	if err := populateTemplate("templates/api/filters.gotpl", outputDir+"/generated_filters.go", GeneralTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: models}); err != nil {
+	if err := populateTemplate("templates/api/filters.gotpl", outputDir+"/generated_filters.go", GeneralTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: modelWithRelationsAsIdsInColumns}); err != nil {
 		return err
 	}
 
@@ -449,12 +458,13 @@ func getCreateAndUpdateColumns(m *Model, availableModels []*Model) ([]*Column, [
 			}
 
 			c := &Column{
-				SnakeName:  c.SnakeName + "_id",
-				CamelName:  c.CamelName + "ID",
-				Type:       &t,
-				Attributes: []*Attribute{},
-				IsRelation: true,
-				Expose:     true,
+				SnakeName:    c.SnakeName + "_id",
+				CamelName:    c.CamelName + "ID",
+				Type:         &t,
+				Attributes:   []*Attribute{},
+				IsRelation:   true,
+				Expose:       true,
+				DatabaseName: c.DatabaseName,
 			}
 			createColumns = append(createColumns, c)
 			updateColumns = append(updateColumns, c)
@@ -895,12 +905,23 @@ func getRelations(f *ast.File, m *Model, pkgName string, models []*Model) []*Mod
 							fieldType = strings.Replace(fieldType, pkgName+".", "", 1)
 						}
 
+						databaseCamelName := strings.TrimPrefix(fieldType, "*")
+						if strings.HasSuffix(databaseCamelName, "Slice") {
+							databaseCamelName = pluralize(strings.TrimSuffix(databaseCamelName, "Slice"))
+						}
+
+						dbName := DatabaseName{
+							CamelName:         databaseCamelName,
+							SingularCamelName: singularize(databaseCamelName),
+						}
+
 						r := ModelTemplateRelation{
 							Name:         field.Names[0].Name,
 							SingularName: singularName,
 							Type:         fieldType,
 							Columns:      columns,
 							IsArray:      strings.Contains(fieldType, "Slice"),
+							DatabaseName: &dbName,
 						}
 
 						if field.Tag != nil {

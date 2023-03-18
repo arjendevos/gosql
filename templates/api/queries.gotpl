@@ -210,32 +210,41 @@ func base64EncodeCursor(cleanCursor string) string {
 		}
 
 		var queryMods []qm.QueryMod
-		
+
+		hasAlreadyOrdering := false
 		if query.Cursor != nil {
 			if query.Cursor.IsPrevious {
+				hasAlreadyOrdering = true
 				queryMods = append(queryMods, qm.Expr(
 					qm.Where("{{.SnakeName}}.created_at >= ?", query.Cursor.CreatedAt), 
 					qm.Expr(
 						qm.Where("{{.SnakeName}}.created_at > ?", query.Cursor.CreatedAt), 
 						qm.Or2(qm.Where("{{.SnakeName}}.id > ?", query.Cursor.ID)),
 					), 
+					qm.OrderBy("{{.SnakeName}}.created_at DESC, {{.SnakeName}}.id ASC"),
 					// qm.OrderBy("{{.SnakeName}}.created_at, {{.SnakeName}}.id ASC"),
 				))
 			}
 
 			if query.Cursor.IsNext {
+				hasAlreadyOrdering = true
 				queryMods = append(queryMods, qm.Expr(
 					qm.Where("{{.SnakeName}}.created_at <= ?", query.Cursor.CreatedAt), 
 					qm.Expr(
 						qm.Where("{{.SnakeName}}.created_at < ?", query.Cursor.CreatedAt), 
 						qm.Or2(qm.Where("{{.SnakeName}}.id < ?", query.Cursor.ID)),
 					), 
+					qm.OrderBy("{{.SnakeName}}.created_at DESC, {{.SnakeName}}.id ASC"),
 					// qm.OrderBy("{{.SnakeName}}.created_at, {{.SnakeName}}.id ASC"),
 				))
 			}
 		} 
 
-		queryMods = append(queryMods, qm.OrderBy("{{.SnakeName}}.created_at, {{.SnakeName}}.id DESC"))
+
+		if !hasAlreadyOrdering {
+			queryMods = append(queryMods, qm.OrderBy("{{.SnakeName}}.created_at DESC"))
+		}
+
 
 		// queryMods = append(queryMods, qm.Offset(query.Page))
 		queryMods = append(queryMods, qm.Limit(query.Limit+1))

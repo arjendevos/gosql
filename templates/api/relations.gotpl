@@ -17,7 +17,7 @@ import (
 
     type {{ .CamelName}}Relations struct {
         {{ range $relation := .Relations }}
-			{{ .Name }} *{{.SingularName}}Relations `boil:"{{ toSnake .Name }}" json:"{{ toSnake .Name }}" toml:"{{ toSnake .Name }}" yaml:"{{ toSnake .Name }}"`
+			{{ .Name }} *{{.DatabaseName.SingularCamelName}}Relations `boil:"{{ toSnake .Name }}" json:"{{ toSnake .Name }}" toml:"{{ toSnake .Name }}" yaml:"{{ toSnake .Name }}"`
         {{- end }}
 		*{{ .CamelName }}RelationPagination
 		SelectColumns []string `json:"_select"`
@@ -48,7 +48,7 @@ import (
 			var relationQueryMods []qm.QueryMod
 
 			if len(relations.{{.Name}}.SelectColumns)>0 {
-				selectMods, err := parse{{.SingularName}}SelectsToMods(relations.{{.Name}}.SelectColumns)
+				selectMods, err := parse{{.DatabaseName.SingularCamelName}}SelectsToMods(relations.{{.Name}}.SelectColumns)
 				if err != nil {
 					return nil, err
 				}
@@ -56,7 +56,7 @@ import (
 			}
 
 			if relations.{{.Name}}.WhereColumns != nil {
-				whereMods, err := parse{{.SingularName}}FilterToMods(relations.{{.Name}}.WhereColumns, "{{toSnake .SingularName}}.")
+				whereMods, err := parse{{.DatabaseName.SingularCamelName}}FilterToMods(relations.{{.Name}}.WhereColumns, "{{toSnake .DatabaseName.SingularCamelName}}.")
 				if err != nil {
 					return nil, err
 				}
@@ -64,7 +64,7 @@ import (
 			}
 
 			if relations.{{.Name}}.OrderColumns != nil {
-				orderMods ,err := parse{{.SingularName}}OrdersToMods(relations.{{.Name}}.OrderColumns)
+				orderMods ,err := parse{{.DatabaseName.SingularCamelName}}OrdersToMods(relations.{{.Name}}.OrderColumns)
 				if err != nil {
 					return nil, err
 				}
@@ -77,7 +77,7 @@ import (
 					limit = parentLimit
 				}
 				page := 0
-				if relations.{{ .Name }}.{{ .SingularName }}RelationPagination != nil {
+				if relations.{{ .Name }}.{{ .DatabaseName.SingularCamelName }}RelationPagination != nil {
 					if relations.{{ .Name }}.LimitPagination > 0 {
 						limit = relations.{{ .Name }}.LimitPagination
 						if limit > 25 {
@@ -91,14 +91,14 @@ import (
 
 				relationQueryMods = append(relationQueryMods, qm.Offset(page))
 				relationQueryMods = append(relationQueryMods, qm.Limit(limit))
-				relationQueryMods = append(relationQueryMods, qm.GroupBy("{{toSnake .SingularName}}.id, {{toSnake .SingularName}}.{{ $relationSnakeName}}_id"))
+				relationQueryMods = append(relationQueryMods, qm.GroupBy("{{toSnake .DatabaseName.SingularCamelName}}.id, {{toSnake .DatabaseName.SingularCamelName}}.{{ $relationSnakeName}}_id"))
 				
-				queryMods = append(queryMods, qm.Load(loadFrom+"{{ .Name }}", relationQueryMods...))
+				queryMods = append(queryMods, qm.Load(loadFrom+"{{ .DatabaseName.CamelName }}", relationQueryMods...))
 			{{- else }}
-				queryMods = append(queryMods, qm.Load(loadFrom+"{{ .Name }}", relationQueryMods...))
+				queryMods = append(queryMods, qm.Load(loadFrom+"{{ .DatabaseName.CamelName }}", relationQueryMods...))
 			{{- end}}
 			
-			deeperQueryMods, err := parse{{.SingularName}}RelationsToMods(relations.{{ .Name }}, loadFrom +"{{.Name}}", {{- if .IsArray }} limit {{- else }} parentLimit {{- end}})
+			deeperQueryMods, err := parse{{.DatabaseName.SingularCamelName}}RelationsToMods(relations.{{ .Name }}, loadFrom +"{{.DatabaseName.CamelName}}", {{- if .IsArray }} limit {{- else }} parentLimit {{- end}})
 			if err != nil {
 				return nil, err
 			}

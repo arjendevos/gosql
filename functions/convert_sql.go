@@ -155,7 +155,7 @@ func (c *GoSQLConfig) ConvertToSql(fileName, t string, models []*Model, existing
 		}
 
 		if hasCreatedAt && hasUUID {
-			indexes = append(indexes, fmt.Sprintf("CREATE INDEX %v_idx_%v_%v_%v ON %v (created_at, uuid)", tableName, idx, "created_at", "id", tableName))
+			indexes = append(indexes, fmt.Sprintf("CREATE INDEX %v_idx_%v_%v_%v ON %v (created_at, id)", tableName, idx, "created_at", "id", tableName))
 			idx++
 		}
 

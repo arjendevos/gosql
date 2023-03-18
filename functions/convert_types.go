@@ -25,8 +25,8 @@ func (c *GoSQLConfig) ConvertTypes(models []*Model) error {
 	pkgName := config.PkgName
 
 	var authQueryFields []*JWTField
-	var modelWithRelationsAndIds []*Model
-	var modelWithRelations []*ModelWithRelations
+	var modelWithRelationIds []*Model
+	var modelWithRelationsAndRelationIds []*ModelWithRelations
 
 	for _, model := range models {
 		fset := token.NewFileSet()
@@ -36,36 +36,38 @@ func (c *GoSQLConfig) ConvertTypes(models []*Model) error {
 		}
 
 		relations := getRelations(f, model, pkgName, models)
-		modelWithRelations = append(modelWithRelations, &ModelWithRelations{Model: model, Relations: relations})
 
 		var customColumns []*Column
 		for _, column := range model.Columns {
 
 			if column.IsRelation {
 				customColumns = append(customColumns, &Column{
-					SnakeName:  column.SnakeName + "_id",
-					CamelName:  column.CamelName + "Id",
-					Type:       &Type{Name: "int", GoTypeName: "int", TypescriptName: "number"},
-					Attributes: column.Attributes,
-					IsRelation: column.IsRelation,
-					Expose:     column.Expose,
+					SnakeName:    column.SnakeName + "_id",
+					CamelName:    column.CamelName + "Id",
+					Type:         &Type{Name: "int", GoTypeName: "int", TypescriptName: "number"},
+					Attributes:   column.Attributes,
+					IsRelation:   column.IsRelation,
+					Expose:       column.Expose,
+					DatabaseName: column.DatabaseName,
 				})
 			} else {
 				customColumns = append(customColumns, column)
 			}
 		}
+
 		for _, relation := range relations {
 			customColumns = append(customColumns, &Column{
-				SnakeName:  camelToSnake(relation.Name),
-				CamelName:  relation.Name,
-				Type:       getRelationType(relation),
-				Attributes: []*Attribute{},
-				IsRelation: true,
-				Expose:     true,
+				SnakeName:    camelToSnake(relation.Name),
+				CamelName:    relation.Name,
+				Type:         getRelationType(relation),
+				Attributes:   []*Attribute{},
+				IsRelation:   true,
+				Expose:       true,
+				DatabaseName: relation.DatabaseName,
 			})
 		}
 
-		modelWithRelationsAndIds = append(modelWithRelationsAndIds, &Model{
+		theModelWithRelationIds := Model{
 			SnakeName:              model.SnakeName,
 			CamelName:              model.CamelName,
 			Columns:                customColumns,
@@ -74,7 +76,13 @@ func (c *GoSQLConfig) ConvertTypes(models []*Model) error {
 			ProtectedRoutes:        model.ProtectedRoutes,
 			IsAuthOrganization:     model.IsAuthOrganization,
 			IsAuthOrganizationUser: model.IsAuthOrganizationUser,
-		})
+			HideRoutes:             model.HideRoutes,
+			Hide:                   model.Hide,
+			Oauth2:                 model.Oauth2,
+		}
+
+		modelWithRelationIds = append(modelWithRelationIds, &theModelWithRelationIds)
+		modelWithRelationsAndRelationIds = append(modelWithRelationsAndRelationIds, &ModelWithRelations{Model: &theModelWithRelationIds, Relations: relations})
 
 		if model.IsAuthUser {
 			for _, c := range model.Columns {
@@ -114,13 +122,13 @@ func (c *GoSQLConfig) ConvertTypes(models []*Model) error {
 	}
 
 	if err := populateTemplate("templates/typescript/types.gotpl", outputDir+"/types.ts", TypescriptTypesTemplateData{
-		Controllers: modelWithRelationsAndIds,
+		Controllers: modelWithRelationIds,
 	}); err != nil {
 		return err
 	}
 
 	if err := populateTemplate("templates/typescript/query.gotpl", outputDir+"/query.ts", TypescriptTypesRelationsTemplateData{
-		Controllers:           modelWithRelations,
+		Controllers:           modelWithRelationsAndRelationIds,
 		AuthFields:            authQueryFields,
 		HasMultipleAuthFields: len(authQueryFields) > 0,
 	}); err != nil {
@@ -128,7 +136,7 @@ func (c *GoSQLConfig) ConvertTypes(models []*Model) error {
 	}
 
 	if err := populateTemplate("templates/typescript/requests.gotpl", outputDir+"/requests.ts", TypescriptTypesTemplateData{
-		Controllers: modelWithRelationsAndIds,
+		Controllers: modelWithRelationIds,
 	}); err != nil {
 		return err
 	}

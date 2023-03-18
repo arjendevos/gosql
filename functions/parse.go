@@ -197,13 +197,24 @@ func ParseGoSQLFile(fileName string, sqlType string) (string, []*Model) {
 			t.GoTypeName = getGotype(t.Name)
 			t.TypescriptName = getTypescriptType(t.Name)
 
+			databaseCamelName := strings.TrimPrefix(t.Name, "*")
+			if strings.HasSuffix(databaseCamelName, "Slice") {
+				databaseCamelName = pluralize(strings.TrimSuffix(databaseCamelName, "Slice"))
+			}
+
+			dbName := DatabaseName{
+				CamelName:         databaseCamelName,
+				SingularCamelName: singularize(databaseCamelName),
+			}
+
 			columns = append(columns, &Column{
-				SnakeName:  camelToSnake(splittedLine[0]),
-				CamelName:  snakeToCamel(splittedLine[0]),
-				Type:       t,
-				Attributes: attributes,
-				IsRelation: isRelation(t.Name),
-				Expose:     shouldExpose(attributes),
+				SnakeName:    camelToSnake(splittedLine[0]),
+				CamelName:    snakeToCamel(splittedLine[0]),
+				Type:         t,
+				Attributes:   attributes,
+				IsRelation:   isRelation(t.Name),
+				Expose:       shouldExpose(attributes),
+				DatabaseName: &dbName,
 			})
 		}
 

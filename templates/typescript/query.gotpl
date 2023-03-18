@@ -38,7 +38,7 @@ export interface FilterValue {
 		{{- range $column := .Columns }}
 			{{- if .Expose }}
        {{- if .IsRelation }}
-            {{ .SnakeName }}?: {{ .CamelName }}Filter;
+            {{ .SnakeName }}?: {{ .DatabaseName.SingularCamelName }}Filter;
         {{- else}}
             {{- if .Type.IsNullable }}
               {{ .SnakeName }}?: {{ $controller.CamelName }}{{ $column.CamelName }}Filter;
@@ -65,7 +65,7 @@ export interface FilterValue {
 
    export type {{ $controller.CamelName }}Relations<T extends "array" | "noArray"> = T extends "array" ?{
       {{- range $relation := .Relations}}
-          {{ toSnake .Name }}?: {{ .SingularName }}Relations<{{- if .IsArray}}"array"{{- else}}"noArray"{{- end}}>;
+          {{ toSnake .Name }}?: {{ .DatabaseName.SingularCamelName }}Relations<{{- if .IsArray}}"array"{{- else}}"noArray"{{- end}}>;
       {{- end}}
         _limit?:number;
         _page?:number;
@@ -74,7 +74,7 @@ export interface FilterValue {
         _where?:{{ .CamelName }}Filter;
       } : {
       {{- range $relation := .Relations}}
-          {{ toSnake .Name }}?: {{ .SingularName }}Relations<{{- if .IsArray}}"array"{{- else}}"noArray"{{- end}}>;
+          {{ toSnake .Name }}?: {{ .DatabaseName.SingularCamelName }}Relations<{{- if .IsArray}}"array"{{- else}}"noArray"{{- end}}>;
       {{- end}}
        _select? : {{ .CamelName }}Select;
    }

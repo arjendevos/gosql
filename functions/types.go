@@ -36,12 +36,13 @@ type ModelWithRelations struct {
 }
 
 type Column struct {
-	SnakeName  string
-	CamelName  string
-	Type       *Type
-	Attributes []*Attribute
-	IsRelation bool
-	Expose     bool
+	SnakeName    string
+	CamelName    string
+	Type         *Type
+	Attributes   []*Attribute
+	IsRelation   bool
+	Expose       bool
+	DatabaseName *DatabaseName
 }
 
 type Type struct {
@@ -186,8 +187,13 @@ type ModelTemplateRelation struct {
 	Type         string
 	Tag          string
 	IsArray      bool
+	DatabaseName *DatabaseName
 }
 
+type DatabaseName struct {
+	SingularCamelName string
+	CamelName         string
+}
 type ModelTemplateData struct {
 	PackageName string
 	Imports     []string

@@ -60,7 +60,7 @@ func SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}(a *dm.{{ .CamelName }}, excl
     if a.R != nil {
         {{- range $relation := .Relations }}
             if a.R.{{ .Name }} != nil && doesNotContain(exclude,"{{ $camelName}}.{{ .SingularName }}") {
-                p.{{ .Name }} = SqlBoiler{{ .Name }}ToApi{{.Name}}(a.R.{{ .Name }}, append(exclude, "{{ .SingularName}}.{{ $camelName }}"))
+                p.{{ .Name }} = SqlBoiler{{ .DatabaseName.CamelName }}ToApi{{.DatabaseName.CamelName}}(a.R.{{ .Name }}, append(exclude, "{{ .SingularName}}.{{ $camelName }}"))
             }
         {{- end }}
     }

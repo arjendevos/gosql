@@ -105,7 +105,7 @@ func parseFilterValue(filterValue *FilterValue, column string, queryMods []qm.Qu
 				{{ .CamelName }} *{{ $controller.CamelName }}{{ .CamelName }}Filter `json:"{{ .SnakeName }}"`
 			{{- else}}
 				{{- if .IsRelation}}
-					{{ .CamelName }} *{{ .CamelName }}Filter `json:"{{ .SnakeName }}"`
+					{{ .CamelName }} *{{ .DatabaseName.CamelName }}Filter `json:"{{ .SnakeName }}"`
 				{{- else}}
 					{{ .CamelName }} *FilterValue `json:"{{ .SnakeName }}"`	
 				{{- end}}
@@ -134,7 +134,7 @@ func parseFilterValue(filterValue *FilterValue, column string, queryMods []qm.Qu
 					}
 				{{- else}}
 					{{- if .IsRelation}}
-						{{toLower .CamelName}}QueryMods, err := parse{{ .CamelName }}FilterToMods(filter.{{ .CamelName }}, "{{.SnakeName}}.")
+						{{toLower .CamelName}}QueryMods, err := parse{{ .DatabaseName.CamelName }}FilterToMods(filter.{{ .CamelName }}, "{{.SnakeName}}.")
 						if err != nil {
 							return nil, err
 						}
