@@ -124,7 +124,7 @@ export function query<T>({ filter, relations, order, select, from, pagination }:
   }
 
   if (from) {
-    queries.push("&from=" + JSON.stringify(from));
+    queries.push("&from=" + decodeURIComponent(JSON.stringify(from)));
   }
 
   if (pagination) {
