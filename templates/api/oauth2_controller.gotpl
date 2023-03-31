@@ -169,7 +169,7 @@ func (c *Oauth2Controller) GoogleCallback(ctx *gin.Context) {
 			userOrganization = &dm.OrganizationUser{
 				AccountID:      account.ID,
 				OrganizationID: organization.ID,
-				Role:           "admin",
+				Role:           "ADMIN",
 			}
 			err = userOrganization.Insert(ctx, tx, boil.Infer())
 			if err != nil {

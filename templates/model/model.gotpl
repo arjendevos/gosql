@@ -42,13 +42,13 @@ func SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}(a *dm.{{ .CamelName }}, excl
         {{- range $column := .Columns }}
         {{- if isNullableDBType .}}
             {{- if eq .Type.GoTypeName "time.Time" }}
-                {{ .CamelName }}: convertTime(a.{{ .CamelName }}),
+                {{ .CamelName }}: ConvertNullTime(a.{{ .CamelName }}),
             {{- else}}
                 {{ .CamelName }}: null{{ firstToUpper .Type.GoTypeName }}(a.{{ .CamelName }}),
             {{- end}}
         {{- else }}
             {{- if eq .Type.GoTypeName "time.Time" }}
-                {{ .CamelName }}: convertTime(a.{{ .CamelName }}),
+                {{ .CamelName }}: ConvertTime(a.{{ .CamelName }}),
             {{- else}}
                 {{ .CamelName }}: {{- if eq .Type.GoTypeName "bool"}}&{{- end}}a.{{ .CamelName }},
             {{- end}}
@@ -59,8 +59,8 @@ func SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}(a *dm.{{ .CamelName }}, excl
     {{ $camelName := .CamelName }}
     if a.R != nil {
         {{- range $relation := .Relations }}
-            if a.R.{{ .Name }} != nil && doesNotContain(exclude,"{{ $camelName}}.{{ .SingularName }}") {
-                p.{{ .Name }} = SqlBoiler{{ .DatabaseName.CamelName }}ToApi{{.DatabaseName.CamelName}}(a.R.{{ .Name }}, append(exclude, "{{ .SingularName}}.{{ $camelName }}"))
+            if a.R.{{ .Name }} != nil && doesNotContain(exclude,"{{ $camelName}}.{{ .DatabaseName.SingularCamelName }}") {
+                p.{{ .Name }} = SqlBoiler{{ .DatabaseName.CamelName }}ToApi{{.DatabaseName.CamelName}}(a.R.{{ .Name }}, append(exclude, "{{ .DatabaseName.SingularCamelName}}.{{ $camelName }}"))
             }
         {{- end }}
     }

@@ -12,6 +12,7 @@
 
 export interface Me {
   account: Account;
-  active_organization_id?: number;
+  active_organization_id?: string;
   active_organization_workspace?: string;
+  token: string;
 }

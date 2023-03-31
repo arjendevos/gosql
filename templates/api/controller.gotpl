@@ -110,9 +110,21 @@ func (c *{{ .CamelName}}Controller) Create(ctx *gin.Context) {
 		{{- range $column := .CreateColumns }}
 			{{- if isUnique . }}
 				{{- if isNotFirstUnique $controller.CreateColumns $column }}
-					queryMods = append(queryMods, qm.Or2(dm.{{ $controllerCamelName }}Where.{{ .CamelName }}.EQ(body.{{ .CamelName }})))
+					{{- if .Type.IsNullable}}
+						if body.{{ .CamelName }} != nil {
+							queryMods = append(queryMods, qm.Or2(dm.{{ $controllerCamelName }}Where.{{ .CamelName }}.EQ(toNull{{firstToUpper .Type.GoTypeName}}(*body.{{ .CamelName}})))
+						}
+					{{- else}}
+						queryMods = append(queryMods, qm.Or2(dm.{{ $controllerCamelName }}Where.{{ .CamelName }}.EQ(body.{{ .CamelName }})))
+					{{- end}}
 				{{- else }}
-					queryMods = append(queryMods, dm.{{ $controllerCamelName }}Where.{{ .CamelName }}.EQ(body.{{ .CamelName }}))
+					{{- if .Type.IsNullable}}
+						if body.{{ .CamelName }} != nil {
+							queryMods = append(queryMods, dm.{{ $controllerCamelName }}Where.{{ .CamelName }}.EQ(toNull{{firstToUpper .Type.GoTypeName}}(*body.{{ .CamelName}})))
+						}
+					{{- else}}
+						queryMods = append(queryMods, dm.{{ $controllerCamelName }}Where.{{ .CamelName }}.EQ(body.{{ .CamelName }}))
+					{{- end}}
 				{{- end}}
 			{{- end}}
 		{{- end}}

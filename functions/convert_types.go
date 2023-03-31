@@ -8,13 +8,20 @@ import (
 )
 
 func (c *GoSQLConfig) ConvertTypes(models []*Model) error {
-	outputDir := "types"
+	outputDir := c.TypesOutputDir
 
-	if err := os.RemoveAll(outputDir); err != nil {
-		return err
-	}
-	if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
-		return err
+	// if err := os.RemoveAll(outputDir); err != nil {
+	// 	return err
+	// }
+	// if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
+	// 	return err
+	// }
+
+	// check if dir exists
+	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
+		if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
+			return err
+		}
 	}
 
 	config, err := parseSqlBoilerConfig()
@@ -44,7 +51,7 @@ func (c *GoSQLConfig) ConvertTypes(models []*Model) error {
 				customColumns = append(customColumns, &Column{
 					SnakeName:    column.SnakeName + "_id",
 					CamelName:    column.CamelName + "Id",
-					Type:         &Type{Name: "int", GoTypeName: "int", TypescriptName: "number"},
+					Type:         &Type{Name: "int", GoTypeName: "int", TypescriptName: "string", IsNullable: column.Type.IsNullable, EmptyValue: column.Type.EmptyValue},
 					Attributes:   column.Attributes,
 					IsRelation:   column.IsRelation,
 					Expose:       column.Expose,
@@ -145,9 +152,11 @@ func (c *GoSQLConfig) ConvertTypes(models []*Model) error {
 }
 
 func getRelationType(relation *ModelTemplateRelation) *Type {
+	singularName := (relation.DatabaseName.SingularCamelName)
+
 	if relation.IsArray {
-		return &Type{Name: "[]" + relation.SingularName, GoTypeName: "[]" + relation.SingularName, TypescriptName: relation.SingularName + "[]"}
+		return &Type{Name: "[]" + singularName, GoTypeName: "[]" + singularName, TypescriptName: singularName + "[]"}
 	}
 
-	return &Type{Name: relation.SingularName, GoTypeName: relation.SingularName, TypescriptName: relation.SingularName}
+	return &Type{Name: singularName, GoTypeName: singularName, TypescriptName: singularName}
 }

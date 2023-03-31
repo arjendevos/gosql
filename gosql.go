@@ -13,6 +13,7 @@ type GoSQLConfig struct {
 	ModelOutputDir      string
 	ControllerOutputDir string
 	SetupProject        bool
+	TypesOutputDir      string
 }
 
 func Convert(c *GoSQLConfig) {
@@ -24,6 +25,7 @@ func Convert(c *GoSQLConfig) {
 		ModelOutputDir:      c.ModelOutputDir,
 		ControllerOutputDir: c.ControllerOutputDir,
 		SetupProject:        c.SetupProject,
+		TypesOutputDir:      c.TypesOutputDir,
 	})
 	if err != nil {
 		fmt.Println("ERR", err)

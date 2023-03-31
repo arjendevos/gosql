@@ -14,6 +14,7 @@ type GoSQLConfig struct {
 	ModelOutputDir      string
 	ControllerOutputDir string
 	SetupProject        bool
+	TypesOutputDir      string
 }
 
 func Convert(c *GoSQLConfig) error {

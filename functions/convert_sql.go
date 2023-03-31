@@ -67,7 +67,11 @@ func (c *GoSQLConfig) ConvertToSql(fileName, t string, models []*Model, existing
 					constraint = fmt.Sprintf("CONSTRAINT %v_pk PRIMARY KEY (%v)", tableName, c.SnakeName)
 				}
 				if constraintType == "UNIQUE" {
-					constraint = fmt.Sprintf("CONSTRAINT %v_ak_%v UNIQUE (%v) NOT DEFERRABLE INITIALLY IMMEDIATE", tableName, ak, c.SnakeName)
+					if c.IsRelation {
+						constraint = fmt.Sprintf("CONSTRAINT %v_ak_%v UNIQUE (%v_id) NOT DEFERRABLE INITIALLY IMMEDIATE", tableName, ak, c.SnakeName)
+					} else {
+						constraint = fmt.Sprintf("CONSTRAINT %v_ak_%v UNIQUE (%v) NOT DEFERRABLE INITIALLY IMMEDIATE", tableName, ak, c.SnakeName)
+					}
 					ak++
 				}
 				constraints = append(constraints, constraint)

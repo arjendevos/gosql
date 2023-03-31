@@ -301,6 +301,7 @@ func (c *AuthController) Me(ctx *gin.Context) {
 					"active_{{.SnakeName}}": ctx.Value("{{ .SnakeName }}"),
 				{{- end}}
 			{{- end }}
+			"token": ctx.Value("auth_token"),
 		}
 	{{- else}}
 		returnPayload := gin.H{
@@ -314,7 +315,13 @@ func (c *AuthController) Me(ctx *gin.Context) {
 {{ if and .HasOrganization .HasOrganizationUser}}
 	func (c *AuthController) SwitchOrganization(ctx *gin.Context) {
 		var body struct {
-			OrganizationID int `json:"organization_id" validate:"nonzero"`
+			{{- range $jwt := .JWTFields }}
+				{{- if .IsFromOrganizationTable }}
+					{{- if eq .SnakeName "organization_id" }}
+						OrganizationID {{.GoType}} `json:"organization_id" validate:"nonzero"`
+					{{- end}}
+				{{- end}}
+			{{- end }}
 		}
 		if err := BindAndValidateJSON(ctx, &body); err != nil {
 			ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "invalid_request", "Invalid request", false, nil))
@@ -322,7 +329,7 @@ func (c *AuthController) Me(ctx *gin.Context) {
 		}
 
 		var queryMods []qm.QueryMod
-		queryMods = append(queryMods, qm.Where("{{ toLower .CamelName }}_id = ?", ctx.Value("{{ toLower .CamelName }}_id").(int)))
+		queryMods = append(queryMods, qm.Where("{{ toLower .CamelName }}_id = ?", ctx.Value("{{ toLower .CamelName }}_id").({{- range $jwt := .JWTFields }}{{- if .IsFromOrganizationTable }}{{- if eq .SnakeName "organization_id" }}{{.GoType}}{{- end}}{{- end}}{{- end}})))
 		queryMods = append(queryMods, qm.Where("{{ toLower .OrganizationCamelName }}_id = ?", body.OrganizationID))
 
 		queryMods = append(queryMods, qm.Load("{{ .OrganizationCamelName }}"))
@@ -357,6 +364,42 @@ func (c *AuthController) Me(ctx *gin.Context) {
 
 		ctx = SetAuthenticationCookie(ctx, tokenString)
 
-		ctx.JSON(http.StatusOK, ResponseWithPayload(nil, nil, nil, true, nil))
+		var accountQueryMods []qm.QueryMod
+		{{- range $jwt := .JWTFields }}
+			{{- if .IsFromUserTable }}
+				accountQueryMods = append(accountQueryMods, qm.Where("{{ toLower .NormalName }} = ?", ctx.Value("{{ .SnakeName }}").({{ .GoType}})))
+			{{- else if .IsFromOrganizationTable }}
+			{{- else if .IsFromOrganizationUserTable }}
+			{{- end}}
+		{{- end }}
+
+		{{ if and .HasOrganization .HasOrganizationUser}}
+			accountQueryMods = append(accountQueryMods, qm.Load(dm.{{ .CamelName }}Rels.{{ pluralize .OrganizationUserCamelName}}))
+			accountQueryMods = append(accountQueryMods, qm.Load(dm.{{ .CamelName }}Rels.{{ pluralize .OrganizationUserCamelName}} + "." + dm.{{ .OrganizationUserCamelName}}Rels.{{ .OrganizationCamelName}}))
+		{{- end}}
+
+		payload, err := dm.{{pluralize .CamelName}}( accountQueryMods...).One(ctx, c.db)
+		if err != nil {
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseWithPayload(nil, "generic", "Something went wrong", false, nil))
+			return
+		}
+
+		{{- if and .HasOrganization .HasOrganizationUser}}
+			returnPayload := gin.H{
+				"account": am.SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}(payload, nil),
+				{{- range $jwt := .JWTFields }}
+					{{- if .IsFromOrganizationTable }}
+						"active_{{.SnakeName}}": {{$dbVariable}}.R.Organization.{{.NormalName}},
+					{{- end}}
+				{{- end }}
+				"token": ctx.Value("auth_token"),
+			}
+		{{- else}}
+			returnPayload := gin.H{
+				"account": am.SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}(payload, nil),
+			}
+		{{- end}}
+
+		ctx.JSON(http.StatusOK, ResponseWithPayload(returnPayload, nil, nil, true, nil))
 	}
 {{- end}}

@@ -194,12 +194,18 @@ func ParseGoSQLFile(fileName string, sqlType string) (string, []*Model) {
 				t.Name = strings.ReplaceAll(t.Name, match[0], "")
 			}
 
+			isRelation := isRelation(t.Name)
+
 			t.GoTypeName = getGotype(t.Name)
 			t.TypescriptName = getTypescriptType(t.Name)
 
 			databaseCamelName := strings.TrimPrefix(t.Name, "*")
 			if strings.HasSuffix(databaseCamelName, "Slice") {
 				databaseCamelName = pluralize(strings.TrimSuffix(databaseCamelName, "Slice"))
+			}
+
+			if isRelation {
+				t.TypescriptName = databaseCamelName
 			}
 
 			dbName := DatabaseName{
@@ -212,7 +218,7 @@ func ParseGoSQLFile(fileName string, sqlType string) (string, []*Model) {
 				CamelName:    snakeToCamel(splittedLine[0]),
 				Type:         t,
 				Attributes:   attributes,
-				IsRelation:   isRelation(t.Name),
+				IsRelation:   isRelation,
 				Expose:       shouldExpose(attributes),
 				DatabaseName: &dbName,
 			})
@@ -285,6 +291,7 @@ func ParseGoSQLFile(fileName string, sqlType string) (string, []*Model) {
 }
 
 func snakeToCamel(s string) string {
+
 	s = camelToSnake(s)
 
 	if strings.Contains(strings.ToLower(s), "id") {
@@ -305,6 +312,9 @@ func snakeToCamel(s string) string {
 	s = strings.ReplaceAll(s, "_", " ")
 	s = strings.Title(s)
 	s = strings.ReplaceAll(s, " ", "")
+
+	return converToAcryonym(s)
+
 	return s
 }
 
@@ -320,6 +330,7 @@ func camelToSnake(input string) string {
 			output.WriteRune(r)
 		}
 	}
+
 	return output.String()
 }
 

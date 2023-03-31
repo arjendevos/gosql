@@ -181,8 +181,8 @@ func base64EncodeCursor(cleanCursor string) string {
 			return nil, err
 		}
 
-		if limitInInt > 25 {
-			limitInInt = 25
+		if limitInInt > 50 {
+			limitInInt = 50
 		}
 
 		var cursor *Cursor

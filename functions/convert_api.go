@@ -97,10 +97,6 @@ func (c *GoSQLConfig) ConvertApiModels(models []*Model) error {
 			}
 		}
 
-		for _, x := range relations {
-			fmt.Println("x", x.Type)
-		}
-
 		if err := populateTemplate("templates/model/model.gotpl", outputDir+"/"+m.SnakeName+".go", ModelTemplateData{
 			PackageName: "am",
 			CamelName:   m.CamelName,
@@ -154,7 +150,7 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 
 	// Build the controllers
 	var modelWithRelations []*ModelWithRelations
-	var modelWithRelationsAsIdsInColumns []*Model
+	var modelWithRelationsWithoutIdsInColumns []*Model
 	var createAndUpdateData []*CreateAndUpdateDataModel
 	var jwtFields []*JWTField
 	var authQueryFields []*JWTField
@@ -194,10 +190,10 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 			Model:         m,
 		})
 
-		var columnsWithRelationsAsIDs []*Column
+		var columnsWithRelationsWithoutIDs []*Column
 		for _, c := range m.Columns {
 			if !c.IsRelation {
-				columnsWithRelationsAsIDs = append(columnsWithRelationsAsIDs, c)
+				columnsWithRelationsWithoutIDs = append(columnsWithRelationsWithoutIDs, c)
 			}
 
 			if c.IsRelation {
@@ -212,9 +208,9 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 					}
 				}
 
-				columnsWithRelationsAsIDs = append(columnsWithRelationsAsIDs, &Column{
-					SnakeName:    c.SnakeName + "_id",
-					CamelName:    c.CamelName + "ID",
+				columnsWithRelationsWithoutIDs = append(columnsWithRelationsWithoutIDs, &Column{
+					SnakeName:    c.SnakeName,
+					CamelName:    c.CamelName,
 					Type:         &t,
 					Attributes:   c.Attributes,
 					IsRelation:   true,
@@ -228,10 +224,10 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 			}
 		}
 
-		modelWithRelationsAsIdsInColumns = append(modelWithRelationsAsIdsInColumns, &Model{
+		modelWithRelationsWithoutIdsInColumns = append(modelWithRelationsWithoutIdsInColumns, &Model{
 			SnakeName:              m.SnakeName,
 			CamelName:              m.CamelName,
-			Columns:                columnsWithRelationsAsIDs,
+			Columns:                columnsWithRelationsWithoutIDs,
 			IsAuthRequired:         m.IsAuthRequired,
 			IsAuthUser:             m.IsAuthUser,
 			IsAuthOrganization:     m.IsAuthOrganization,
@@ -341,12 +337,20 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 	var OrganizationUserCamelName string
 
 	if authUser != nil && authUser.Oauth2 != nil {
+		// remove time.Time from imports
+		var nImport []string
+		for _, m := range modelImports {
+			if m != "time" {
+				nImport = append(nImport, m)
+			}
+		}
+
 		if err := populateTemplate("templates/api/oauth2_controller.gotpl", outputDir+"/generated_oauth2_controller.go", Oauth2TemplateData{
 			PackageName:           strings.ReplaceAll(c.ControllerOutputDir, "/", "_"),
 			UserTable:             authUser,
 			OrganizationTable:     authOrganization,
 			OrganizationUserTable: authOrganizationUser,
-			Imports:               modelImports,
+			Imports:               nImport,
 			JWTFields:             jwtFields,
 		}); err != nil {
 			return err
@@ -385,7 +389,7 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 		return err
 	}
 
-	if err := populateTemplate("templates/api/filters.gotpl", outputDir+"/generated_filters.go", GeneralTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: modelWithRelationsAsIdsInColumns}); err != nil {
+	if err := populateTemplate("templates/api/filters.gotpl", outputDir+"/generated_filters.go", GeneralTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: modelWithRelationsWithoutIdsInColumns}); err != nil {
 		return err
 	}
 
@@ -672,6 +676,12 @@ func parseTemplate(c *TemplateConfig, shouldFormat bool) (string, error) {
 
 			return false
 		},
+		"splitOnDotFirst": func(s string) string {
+			if !strings.Contains(s, ".") {
+				return s
+			}
+			return strings.Split(s, ".")[0]
+		},
 		"isNotNil": func(a *JWTField) bool {
 			return a != nil
 		},
@@ -685,7 +695,7 @@ func parseTemplate(c *TemplateConfig, shouldFormat bool) (string, error) {
 			return strings.Contains(a, b)
 		},
 		"eq": strings.EqualFold,
-		"getValidate": func(c *Column) string {
+		"getValidate": func(c *Column, isUpdateColumn bool) string {
 			var v []string
 			var canBeEmpty bool
 
@@ -699,7 +709,7 @@ func parseTemplate(c *TemplateConfig, shouldFormat bool) (string, error) {
 				}
 			}
 
-			if !c.Type.IsNullable && !canBeEmpty {
+			if !c.Type.IsNullable && !canBeEmpty && !isUpdateColumn {
 				v = append(v, "nonzero")
 			}
 

@@ -15,7 +15,7 @@ type ApiConfig struct {
     AllowOrigins []string
     AllowMethods []string
 	AllowHeaders []string
-	CustomRoutes func(router *gin.Engine) *gin.Engine
+	CustomRoutes func(router *gin.Engine) (*gin.Engine)
     ExtraAuthMiddleware func(g *gin.Context)
 }
 
@@ -28,14 +28,8 @@ func RunApi(db *sql.DB, c *ApiConfig) {
 	}
 
     router := gin.Default()
-	router.Use(cors.New(cors.Config{
-		AllowMethods:     append(c.AllowMethods, []string{"GET", "POST", "PATCH", "DELETE", "OPTIONS"}...),
-		AllowHeaders:     append(c.AllowHeaders, []string{"Origin", "Content-Length", "Content-Type", "Authorization", "Access-Control-Allow-Credentials", "cookie"}...),
-		AllowOrigins:     c.AllowOrigins,
-		MaxAge:           12 * time.Hour,
-		AllowCredentials: true,
-	}))
 
+    router.Use(c.cors())
     {{- if hasAuthFields .AuthFields }}
         authGroup := router.Group("/auth")
         authGroup.POST("/signin", controllers.Auth.SignIn)
@@ -69,4 +63,14 @@ func RunApi(db *sql.DB, c *ApiConfig) {
 		port = "8080"
 	}
     panic(router.Run(fmt.Sprintf("localhost:%s", port)))
+}
+
+func (c *ApiConfig) cors() gin.HandlerFunc {
+		return cors.New(cors.Config{
+			AllowMethods:     append(c.AllowMethods, []string{"GET", "POST", "PATCH", "DELETE", "OPTIONS"}...),
+			AllowHeaders:     append(c.AllowHeaders, []string{"Origin", "Content-Length", "Content-Type", "Authorization", "Access-Control-Allow-Credentials", "cookie"}...),
+			AllowOrigins:     c.AllowOrigins,
+			MaxAge:           12 * time.Hour,
+			AllowCredentials: true,
+		})
 }

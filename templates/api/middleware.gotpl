@@ -44,6 +44,8 @@ func AuthMiddleware(extraAuthMiddleware func (gin *gin.Context)) gin.HandlerFunc
             c.Set("{{ .SnakeName }}", value.{{ .CamelName }})
         {{- end }}
 
+		c.Set("auth_token", tokenString)
+
 		if extraAuthMiddleware != nil {
 			extraAuthMiddleware(c)
 		}
