@@ -66,9 +66,7 @@ Add `authUser` after your model to make it the main table for your user authenti
 - `email string @unique`
 - `password string`
 
-You can exclude any table from the authentication by adding `@noAuth` after the table name.
-
-`@noAuth` is deprecated, use `@protected` instead. Use `@hide` to hide entire table from outside world.
+Use `@hide` to hide entire table from outside world.
 
 `@protected` has the following options (`@protected(LIST, BYID, CREATE, UPDATE, DELETE)`):
 
@@ -168,6 +166,8 @@ You can create a relation by adding a column name (this should be the table name
 - [x] Add custom marshaller for time.Time (high priority)
 - [x] Make oauth2 google endpoints better based on scheme (org etc) (high priority)
 - [x] Select columns fix created_at and updated_at omitempty problem (low priority)
+- [x] Change From Query in Filter to InnerJoin for better performance (low priority)
+- [ ] Find a way to pass in args with var names instead of raw sql (medium priority)
 - [ ] Add oauth2 facebook login endpoints (low priority)
 - [ ] Add oauth2 apple login endpoints (lowest priority)
 - [ ] add email option (smtp with default templates) (low priority)
