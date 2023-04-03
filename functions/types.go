@@ -104,6 +104,7 @@ type SetupMainTemplateData struct {
 type GeneralTemplateData struct {
 	PackageName string
 	Controllers []*Model
+	Imports     []string
 }
 
 type Oauth2TemplateData struct {

@@ -56,6 +56,7 @@ func (c *GoSQLConfig) ConvertApiModels(models []*Model) error {
 		fset := token.NewFileSet()
 		f, err := parser.ParseFile(fset, fmt.Sprintf("%s/%s.go", config.Output, m.SnakeName), nil, parser.AllErrors)
 		if err != nil {
+			fmt.Println(err)
 			return fmt.Errorf("make sure to migrate and run sqlboiler first")
 		}
 
@@ -389,7 +390,7 @@ func (c *GoSQLConfig) ConvertApiControllers(models []*Model) error {
 		return err
 	}
 
-	if err := populateTemplate("templates/api/filters.gotpl", outputDir+"/generated_filters.go", GeneralTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: modelWithRelationsWithoutIdsInColumns}); err != nil {
+	if err := populateTemplate("templates/api/filters.gotpl", outputDir+"/generated_filters.go", GeneralTemplateData{PackageName: strings.ReplaceAll(c.ControllerOutputDir, "/", "_"), Controllers: modelWithRelationsWithoutIdsInColumns, Imports: []string{moduleName + "/" + config.Output}}); err != nil {
 		return err
 	}
 
@@ -805,6 +806,15 @@ func parseTemplate(c *TemplateConfig, shouldFormat bool) (string, error) {
 		},
 		"isRelationWithoutID": func(c *Column) bool {
 			return c.IsRelation && !strings.HasSuffix(c.SnakeName, "_id")
+		},
+		"hasColumn": func(cs []*Column, name string) bool {
+			for _, c := range cs {
+				if c.SnakeName == name {
+					return true
+				}
+			}
+
+			return false
 		},
 	}).Parse(c.Template)
 	if err != nil {

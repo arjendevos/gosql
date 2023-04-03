@@ -3,10 +3,16 @@ package {{ .PackageName }}
 
 import (
 	"encoding/json"
+	"fmt"
+	"strings"
 
+	"github.com/volatiletech/sqlboiler/v4/queries"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
-)
 
+	{{ range .Imports }}
+		"{{ . }}"
+	{{ end }}
+)
 type FilterValue struct {
 	Equals    *string `json:"equals"`
 	NotEquals *string `json:"notEquals"`
@@ -139,9 +145,27 @@ func parseFilterValue(filterValue *FilterValue, column string, queryMods []qm.Qu
 							return nil, err
 						}
 
-						queryMods = append(queryMods, qm.From("{{ .SnakeName }}"))
-						{{toLower .CamelName}}QueryMods = append({{toLower .CamelName}}QueryMods, qm.Where("{{ .SnakeName }}.id = {{ $controller.SnakeName }}.{{ .SnakeName }}_id"))
-						queryMods = append(queryMods, qm.Expr({{toLower .CamelName}}QueryMods...))
+						var joinQueryMods []qm.QueryMod
+						joinQueryMods = append(joinQueryMods, qm.From("can_be_anything"))
+						joinQueryMods = append(joinQueryMods, qm.Where("can_be_anything.id = can_be_anything2.can_be_anything_id"))
+						joinQueryMods = append(joinQueryMods, {{toLower .CamelName}}QueryMods...)
+				
+						q := dm.NewQuery(joinQueryMods...)
+						s, args:=queries.BuildQuery(q)
+				
+						joinQueryString := "AND"+strings.Split(s, "AND")[1]
+						joinQueryString = strings.TrimSuffix(joinQueryString, ";")
+				
+						for i, arg := range args {
+							// TODO find another way to do this
+							joinQueryString = strings.Replace(joinQueryString, fmt.Sprintf("$%v",i+1 ), fmt.Sprintf("'%v'", arg), 1)
+						}
+				
+						queryMods = append(queryMods, qm.InnerJoin(fmt.Sprintf("{{.SnakeName}} ON {{.SnakeName}}.id = {{ $controller.SnakeName }}.{{ .SnakeName }}_id %v", joinQueryString)))
+
+						// queryMods = append(queryMods, qm.From("{{ .SnakeName }}"))
+						// {{toLower .CamelName}}QueryMods = append({{toLower .CamelName}}QueryMods, qm.Where("{{ .SnakeName }}.id = {{ $controller.SnakeName }}.{{ .SnakeName }}_id"))
+						// queryMods = append(queryMods, qm.Expr({{toLower .CamelName}}QueryMods...))
 					{{- else}}
 						columnMods := parseFilterValue(filter.{{ .CamelName }}, prefix +"{{ .SnakeName }}", nil)
 						if len(columnMods) > 0 {

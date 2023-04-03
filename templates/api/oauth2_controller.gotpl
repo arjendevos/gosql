@@ -158,19 +158,29 @@ func (c *Oauth2Controller) GoogleCallback(ctx *gin.Context) {
 
 		{{- if and (isNotNilTable .OrganizationTable) (isNotNilTable .OrganizationUserTable)}}
 			organization = &dm.Organization{
-				Workspace: GenerateRandomToken(),
-				PublicName:      GenerateRandomToken(),
+				{{- if hasColumn .OrganizationTable.Columns "workspace"	}}
+					Workspace: GenerateRandomToken(),
+				{{- end }}
+				{{- if hasColumn .OrganizationTable.Columns "public_name" }}
+					PublicName: GenerateRandomToken(),
+				{{- end }}
 			}
 			err = organization.Insert(ctx, tx, boil.Infer())
 			if err != nil {
 				return err
 			}
 
+
 			userOrganization = &dm.OrganizationUser{
 				AccountID:      account.ID,
 				OrganizationID: organization.ID,
-				Role:           "ADMIN",
-				InviteStatus: "ACCEPTED",
+				{{- if hasColumn .OrganizationUserTable.Columns "role"	}}
+					Role:           "ADMIN",
+				{{- end }}
+				
+				{{- if hasColumn .OrganizationUserTable.Columns "invite_status"	}}
+					InviteStatus: "ACCEPTED",
+				{{- end }}
 			}
 			err = userOrganization.Insert(ctx, tx, boil.Infer())
 			if err != nil {
