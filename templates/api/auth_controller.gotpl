@@ -317,8 +317,8 @@ func (c *AuthController) Me(ctx *gin.Context) {
 		var body struct {
 			{{- range $jwt := .JWTFields }}
 				{{- if .IsFromOrganizationTable }}
-					{{- if eq .SnakeName "organization_id" }}
-						OrganizationID {{.GoType}} `json:"organization_id" validate:"nonzero"`
+					{{- if contains .SnakeName "_id" }}
+						{{.CamelName}} {{.GoType}} `json:"{{.SnakeName}}" validate:"nonzero"`
 					{{- end}}
 				{{- end}}
 			{{- end }}
@@ -329,8 +329,8 @@ func (c *AuthController) Me(ctx *gin.Context) {
 		}
 
 		var queryMods []qm.QueryMod
-		queryMods = append(queryMods, qm.Where("{{ toLower .CamelName }}_id = ?", ctx.Value("{{ toLower .CamelName }}_id").({{- range $jwt := .JWTFields }}{{- if .IsFromOrganizationTable }}{{- if eq .SnakeName "organization_id" }}{{.GoType}}{{- end}}{{- end}}{{- end}})))
-		queryMods = append(queryMods, qm.Where("{{ toLower .OrganizationCamelName }}_id = ?", body.OrganizationID))
+		queryMods = append(queryMods, qm.Where("{{ toLower .CamelName }}_id = ?", ctx.Value("{{ toLower .CamelName }}_id").({{- range $jwt := .JWTFields }}{{- if .IsFromOrganizationTable }}{{- if contains .SnakeName "_id" }}{{.GoType}}{{- end}}{{- end}}{{- end}})))
+		queryMods = append(queryMods, qm.Where("{{ toLower .OrganizationCamelName }}_id = ?", body.{{- range $jwt := .JWTFields }}{{- if .IsFromOrganizationTable }}{{- if contains .SnakeName "_id" }}{{.CamelName}}{{- end}}{{- end}}{{- end}}))
 
 		queryMods = append(queryMods, qm.Load("{{ .OrganizationCamelName }}"))
 
@@ -389,7 +389,7 @@ func (c *AuthController) Me(ctx *gin.Context) {
 				"account": am.SqlBoiler{{ .CamelName }}ToApi{{ .CamelName }}(payload, nil),
 				{{- range $jwt := .JWTFields }}
 					{{- if .IsFromOrganizationTable }}
-						"active_{{.SnakeName}}": {{$dbVariable}}.R.Organization.{{.NormalName}},
+						"active_{{.SnakeName}}": {{$dbVariable}}.R.{{ .TableCamelName}}.{{.NormalName}},
 					{{- end}}
 				{{- end }}
 				"token": ctx.Value("auth_token"),

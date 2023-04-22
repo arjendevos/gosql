@@ -141,8 +141,8 @@ func (c *Oauth2Controller) GoogleCallback(ctx *gin.Context) {
 
     var account *dm.Account
 	{{- if and (isNotNilTable .OrganizationTable) (isNotNilTable .OrganizationUserTable)}}
-		var organization *dm.Organization
-		var userOrganization *dm.OrganizationUser
+		var organization *dm.{{ .OrganizationTable.CamelName}}
+		var userOrganization *dm.{{ .OrganizationUserTable.CamelName}}
 	{{- end }}
 
 	err = Transactor(c.db, func(tx *sql.Tx) error {
@@ -157,9 +157,12 @@ func (c *Oauth2Controller) GoogleCallback(ctx *gin.Context) {
 		}
 
 		{{- if and (isNotNilTable .OrganizationTable) (isNotNilTable .OrganizationUserTable)}}
-			organization = &dm.Organization{
+			organization = &dm.{{ .OrganizationTable.CamelName}}{
 				{{- if hasColumn .OrganizationTable.Columns "workspace"	}}
 					Workspace: GenerateRandomToken(),
+				{{- end }}
+				{{- if hasColumn .OrganizationTable.Columns "slug"	}}
+					Slug: GenerateRandomToken(),
 				{{- end }}
 				{{- if hasColumn .OrganizationTable.Columns "public_name" }}
 					PublicName: GenerateRandomToken(),
@@ -170,10 +173,9 @@ func (c *Oauth2Controller) GoogleCallback(ctx *gin.Context) {
 				return err
 			}
 
-
-			userOrganization = &dm.OrganizationUser{
+			userOrganization = &dm.{{ .OrganizationUserTable.CamelName}}{
 				AccountID:      account.ID,
-				OrganizationID: organization.ID,
+				{{.OrganizationTable.CamelName}}ID: organization.ID,
 				{{- if hasColumn .OrganizationUserTable.Columns "role"	}}
 					Role:           "ADMIN",
 				{{- end }}

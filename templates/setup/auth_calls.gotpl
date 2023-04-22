@@ -30,7 +30,7 @@ func CallMiddleware(c *gin.Context) {
 	if hasRelationsQuery {
 		extraCalls, err := convertRelationQueryToAuthCall(relations)
 		if err != nil {
-			c.AbortWithStatusJSON(401, generated.ResponseWithPayload(nil, "unauthorized", "You are unauthorized", false))
+			c.AbortWithStatusJSON(401, generated.ResponseWithPayload(nil, "unauthorized", "You are unauthorized", false, nil))
 			return
 		}
 
@@ -70,7 +70,7 @@ func CallMiddleware(c *gin.Context) {
 			fmt.Println()
 			fmt.Printf(`   "%v": true`, call)
 			fmt.Println()
-			c.AbortWithStatusJSON(401, generated.ResponseWithPayload(nil, "unauthorized", "You are unauthorized", false))
+			c.AbortWithStatusJSON(401, generated.ResponseWithPayload(nil, "unauthorized", "You are unauthorized", false, nil))
 			return
 		}
 	}
