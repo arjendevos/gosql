@@ -23,7 +23,7 @@ type Controllers struct {
     {{- end }}
 }
 
-func newClient(db *sql.DB) *Controllers {
+func NewClient(db *sql.DB) *Controllers {
 	ctx := context.Background()
 	client := &Client{db: db, ctx: ctx}
 	return &Controllers{

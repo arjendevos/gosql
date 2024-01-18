@@ -24,7 +24,7 @@ type Oauth2Controller struct {
     *Client
 }
 
-func getGoogleOauth2Config() *oauth2.Config {
+func GetGoogleOauth2Config() *oauth2.Config {
 	return &oauth2.Config{
 		ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
 		ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
@@ -66,7 +66,7 @@ func (c *Oauth2Controller) Google(ctx *gin.Context) {
     ctx.SetSameSite(http.SameSiteLaxMode)
 	ctx.SetCookie("Oauth2State", state, 3600, "/", os.Getenv("API_DOMAIN"), false, true)
 
-	ctx.Redirect(302, getGoogleOauth2Config().AuthCodeURL(state))
+	ctx.Redirect(302, GetGoogleOauth2Config().AuthCodeURL(state))
 }
 
 func (c *Oauth2Controller) GoogleCallback(ctx *gin.Context) {
@@ -86,7 +86,7 @@ func (c *Oauth2Controller) GoogleCallback(ctx *gin.Context) {
 		return
 	}
 
-	token, err := getGoogleOauth2Config().Exchange(ctx, code)
+	token, err := GetGoogleOauth2Config().Exchange(ctx, code)
 	if err != nil {
 		ctx.Redirect(302, redirectUri+"?error=invalid_request")
 		return
@@ -148,8 +148,19 @@ func (c *Oauth2Controller) GoogleCallback(ctx *gin.Context) {
 	err = Transactor(c.db, func(tx *sql.Tx) error {
 		account = &dm.Account{
 			Email:             userInfo.Email,
-			Name:              userInfo.Name,
-			ProfilePictureURL: userInfo.Picture,
+			{{ if hasColumn .UserTable.Columns "name" }}
+				Name:              userInfo.Name,
+			{{ end }}
+			{{ if hasColumn .UserTable.Columns "full_name" }}
+				FullName:              userInfo.Name,
+			{{ end }}
+			{{ if hasColumn .UserTable.Columns "profile_picture_url" }}
+				ProfilePictureURL: userInfo.Picture,
+			{{ end }}
+			{{ if hasColumn .UserTable.Columns "avatar_url" }}
+				AvatarURL:              userInfo.Name,
+			{{ end }}
+			
 		}
 		err = account.Insert(ctx, tx, boil.Infer())
 		if err != nil {

@@ -22,14 +22,14 @@ import (
         for _, v := range columns {
             switch v {
             {{- range $column := .Columns }}
-                
-                case "{{ .SnakeName }}":
-                    {{- if .IsRelation}}
-                    // Parse realtion query columns
-                    {{- else}}
-                        selectColumns = append(selectColumns, "{{$controller.SnakeName}}.{{ .SnakeName }}")
-                    {{- end}}
 
+                {{- if .IsRelation}}
+                    case "{{ .SnakeName }}_id":
+                        selectColumns = append(selectColumns, "{{$controller.SnakeName}}.{{ .SnakeName }}_id")
+                {{- else}}
+                    case "{{ .SnakeName }}":
+                        selectColumns = append(selectColumns, "{{$controller.SnakeName}}.{{ .SnakeName }}")
+                {{- end}}
             {{- end }}
             }
         }

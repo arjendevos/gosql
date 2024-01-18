@@ -27,20 +27,28 @@ type Pagination struct {
 	PrevPageCursor *string `json:"prev_page_cursor"`
 }
 
-
 func ResponseWithPayload(payload interface{}, errCode, message interface{}, ok bool, pagination *Pagination) gin.H {
-	var m interface{}
-	var e interface{}
+	response := gin.H{}
 
-	if errCode != nil {
-		e = errCode
+	if (payload != nil) {
+		response["payload"] = payload
 	}
 
-	if message != nil {
-		m = message
+	if (errCode != nil) {
+		response["error"] = errCode
 	}
 
-	return gin.H{"payload": payload, "error": e, "message": m, "ok": ok, "pagination": pagination}
+	if (message != nil) {
+		response["message"] = message
+	}
+
+	response["ok"] = ok
+
+	if (pagination != nil) {
+		response["pagination"] = pagination
+	}
+
+	return response
 }
 
 func BindAndValidateJSON(context *gin.Context, obj interface{}) error {
@@ -133,6 +141,12 @@ func GenerateRandomToken() string {
 func SetAuthenticationCookie(ctx *gin.Context, tokenString string) *gin.Context {
 	ctx.SetSameSite(http.SameSiteLaxMode)
 	ctx.SetCookie("Authorization", tokenString, 3600*24*7, "/", os.Getenv("COOKIE_DOMAIN"), false, true)
+	return ctx
+}
+
+func SetAuthenticationCookieSignout(ctx *gin.Context) *gin.Context {
+	ctx.SetSameSite(http.SameSiteLaxMode)
+	ctx.SetCookie("Authorization", "", -1, "/", os.Getenv("COOKIE_DOMAIN"), false, true)
 	return ctx
 }
 

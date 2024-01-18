@@ -152,16 +152,19 @@ func parseFilterValue(filterValue *FilterValue, column string, queryMods []qm.Qu
 				
 						q := dm.NewQuery(joinQueryMods...)
 						s, args:=queries.BuildQuery(q)
-				
-						joinQueryString := "AND"+strings.Split(s, "AND")[1]
-						joinQueryString = strings.TrimSuffix(joinQueryString, ";")
-				
-						for i, arg := range args {
-							// TODO find another way to do this
-							joinQueryString = strings.Replace(joinQueryString, fmt.Sprintf("$%v",i+1 ), fmt.Sprintf("'%v'", arg), 1)
+						
+						if (strings.Contains(s, "AND")) {
+
+							joinQueryString := "AND"+strings.Split(s, "AND")[1]
+							joinQueryString = strings.TrimSuffix(joinQueryString, ";")
+					
+							for i, arg := range args {
+								// TODO find another way to do this
+								joinQueryString = strings.Replace(joinQueryString, fmt.Sprintf("$%v",i+1 ), fmt.Sprintf("'%v'", arg), 1)
+							}
+					
+							queryMods = append(queryMods, qm.InnerJoin(fmt.Sprintf("{{.SnakeName}} ON {{.SnakeName}}.id = {{ $controller.SnakeName }}.{{ .SnakeName }}_id %v", joinQueryString)))
 						}
-				
-						queryMods = append(queryMods, qm.InnerJoin(fmt.Sprintf("{{.SnakeName}} ON {{.SnakeName}}.id = {{ $controller.SnakeName }}.{{ .SnakeName }}_id %v", joinQueryString)))
 
 						// queryMods = append(queryMods, qm.From("{{ .SnakeName }}"))
 						// {{toLower .CamelName}}QueryMods = append({{toLower .CamelName}}QueryMods, qm.Where("{{ .SnakeName }}.id = {{ $controller.SnakeName }}.{{ .SnakeName }}_id"))

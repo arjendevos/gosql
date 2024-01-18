@@ -147,7 +147,6 @@ func base64EncodeCursor(cleanCursor string) string {
 	
 
 	type {{ .CamelName }}ListQuery struct {
-		Page   int    `json:"page"`
 		Limit  int    `json:"limit"`
 		Cursor *Cursor `json:"cursor"`
 		Filter *{{ .CamelName }}Filter `json:"filter"`
@@ -155,7 +154,6 @@ func base64EncodeCursor(cleanCursor string) string {
 	}
 	
 	func parse{{ .CamelName }}ListQuery(context *gin.Context) (*{{ .CamelName }}ListQuery, error) {
-		page := context.DefaultQuery("page", "0")
 		limit := context.DefaultQuery("limit", "10")
 		filter := context.DefaultQuery("filter", "{}")
 		orders := context.DefaultQuery("order", "{}")
@@ -172,17 +170,12 @@ func base64EncodeCursor(cleanCursor string) string {
 			return nil, err
 		}
 
-		pageInInt, err := strconv.Atoi(page)
-		if err != nil {
-			return nil, err
-		}
-
 		limitInInt, err := strconv.Atoi(limit)
 		if err != nil {
 			return nil, err
 		}
 
-		if limitInInt > 50 {
+		if limitInInt > 50 || limitInInt <= 0 {
 			limitInInt = 50
 		}
 
@@ -196,7 +189,6 @@ func base64EncodeCursor(cleanCursor string) string {
 		}
 
 		return &{{ .CamelName }}ListQuery{
-			Page:   pageInInt,
 			Limit:  limitInInt,
 			Filter: f,
 			Orders: o,

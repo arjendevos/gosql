@@ -16,3 +16,10 @@ export interface Me {
   active_organization_workspace?: string;
   token: string;
 }
+
+export interface Me2 {
+  account: Account;
+  active_workspace_id: string | null;
+  has_workspace: boolean;
+  token: string;
+}

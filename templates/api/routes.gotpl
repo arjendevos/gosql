@@ -20,7 +20,7 @@ type ApiConfig struct {
 }
 
 func RunApi(db *sql.DB, c *ApiConfig) {
-    controllers := newClient(db)
+    controllers := NewClient(db)
     defer db.Close()
 
     if os.Getenv("GIN_MODE") == "release" {
